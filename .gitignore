@@ -1,0 +1,33 @@
+# Environment
+.env
+.env.*
+
+# Build output
+bin/
+*.exe
+*.out
+
+# Go
+/vendor/
+
+# Test coverage
+coverage.out
+*.coverprofile
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
+
+# Air hot reload (kalau pakai)
+.air.toml
