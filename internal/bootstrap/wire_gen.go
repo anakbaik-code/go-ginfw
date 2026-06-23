@@ -25,7 +25,7 @@ func InitializeApp() (*App, func(), error) {
 	}
 	queries := database.New(db)
 	repositoryUser := user.NewRepositoryUser(queries)
-	userService := user.NewServiceUser(repositoryUser)
+	userService := user.NewServiceUser(repositoryUser, configConfig)
 	handlerUser := user.NewHandleUser(userService)
 	app := &App{
 		Config:      configConfig,

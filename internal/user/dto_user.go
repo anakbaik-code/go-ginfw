@@ -1,5 +1,7 @@
 package user
 
+import "time"
+
 type CreateRequest struct {
 	Name     string `json:"name" binding:"required"`
 	Email    string `json:"email" binding:"required,email"`
@@ -9,13 +11,15 @@ type CreateRequest struct {
 }
 
 type UserResponse struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Phone    string `json:"phone,omitempty"`
-	Address  string `json:"address,omitempty"`
-	Role     string `json:"role"`
-	IsActive bool   `json:"is_active"`
+	ID        int64     `json:"id"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Phone     string    `json:"phone,omitempty"`
+	Address   string    `json:"address,omitempty"`
+	Role      string    `json:"role"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type ListUserRequest struct {
@@ -27,4 +31,20 @@ type UpdateUserProfileRequest struct {
 	Name    string `json:"name" binding:"required"`
 	Phone   string `json:"phone"`
 	Address string `json:"address"`
+}
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,gt=3,lte=50" `
+}
+type LoginResponse struct {
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
+	User         UserResponse `json:"user"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
+}
+type RefreshTokenResponse struct {
+	AccessToken string `json:"access_token"`
 }

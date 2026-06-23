@@ -6,10 +6,11 @@ package database
 
 import (
 	"database/sql"
+	"time"
 )
 
 type User struct {
-	ID           sql.NullInt64
+	ID           uint64
 	Name         string
 	Email        string
 	PasswordHash string
@@ -18,7 +19,7 @@ type User struct {
 	Role         string
 	IsActive     bool
 	RefreshToken sql.NullString
-	CreatedAt    sql.NullTime
-	UpdatedAt    sql.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 	DeletedAt    sql.NullTime
 }

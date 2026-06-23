@@ -8,6 +8,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const countUsers = `-- name: CountUsers :one
@@ -69,7 +70,7 @@ SET
 WHERE id = ?
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id sql.NullInt64) error {
+func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
@@ -87,11 +88,11 @@ ORDER BY created_at DESC
 `
 
 type GetActiveUsersRow struct {
-	ID        sql.NullInt64
+	ID        uint64
 	Name      string
 	Email     string
 	Role      string
-	CreatedAt sql.NullTime
+	CreatedAt time.Time
 }
 
 func (q *Queries) GetActiveUsers(ctx context.Context) ([]GetActiveUsersRow, error) {
@@ -140,7 +141,7 @@ WHERE email = ? AND deleted_at IS NULL
 `
 
 type GetUserByEmailRow struct {
-	ID           sql.NullInt64
+	ID           uint64
 	Name         string
 	Email        string
 	PasswordHash string
@@ -148,8 +149,8 @@ type GetUserByEmailRow struct {
 	Address      sql.NullString
 	Role         string
 	IsActive     bool
-	CreatedAt    sql.NullTime
-	UpdatedAt    sql.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
@@ -186,18 +187,18 @@ WHERE id = ? AND deleted_at IS NULL
 `
 
 type GetUserByIDRow struct {
-	ID        sql.NullInt64
+	ID        uint64
 	Name      string
 	Email     string
 	Phone     sql.NullString
 	Address   sql.NullString
 	Role      string
 	IsActive  bool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
-func (q *Queries) GetUserByID(ctx context.Context, id sql.NullInt64) (GetUserByIDRow, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id uint64) (GetUserByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, id)
 	var i GetUserByIDRow
 	err := row.Scan(
@@ -226,7 +227,7 @@ WHERE refresh_token = ? AND deleted_at IS NULL
 `
 
 type GetUserByRefreshTokenRow struct {
-	ID       sql.NullInt64
+	ID       uint64
 	Name     string
 	Email    string
 	Role     string
@@ -251,7 +252,7 @@ DELETE FROM users
 WHERE id = ?
 `
 
-func (q *Queries) HardDeleteUser(ctx context.Context, id sql.NullInt64) error {
+func (q *Queries) HardDeleteUser(ctx context.Context, id uint64) error {
 	_, err := q.db.ExecContext(ctx, hardDeleteUser, id)
 	return err
 }
@@ -279,15 +280,15 @@ type ListUsersParams struct {
 }
 
 type ListUsersRow struct {
-	ID        sql.NullInt64
+	ID        uint64
 	Name      string
 	Email     string
 	Phone     sql.NullString
 	Address   sql.NullString
 	Role      string
 	IsActive  bool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -349,15 +350,15 @@ type SearchUsersParams struct {
 }
 
 type SearchUsersRow struct {
-	ID        sql.NullInt64
+	ID        uint64
 	Name      string
 	Email     string
 	Phone     sql.NullString
 	Address   sql.NullString
 	Role      string
 	IsActive  bool
-	CreatedAt sql.NullTime
-	UpdatedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
@@ -412,7 +413,7 @@ type UpdateUserParams struct {
 	Name    string
 	Phone   sql.NullString
 	Address sql.NullString
-	ID      sql.NullInt64
+	ID      uint64
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
@@ -435,7 +436,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 type UpdateUserEmailParams struct {
 	Email string
-	ID    sql.NullInt64
+	ID    uint64
 }
 
 func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams) error {
@@ -453,7 +454,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 type UpdateUserPasswordParams struct {
 	PasswordHash string
-	ID           sql.NullInt64
+	ID           uint64
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
@@ -471,7 +472,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 type UpdateUserRefreshTokenParams struct {
 	RefreshToken sql.NullString
-	ID           sql.NullInt64
+	ID           uint64
 }
 
 func (q *Queries) UpdateUserRefreshToken(ctx context.Context, arg UpdateUserRefreshTokenParams) error {
@@ -489,7 +490,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 type UpdateUserRoleParams struct {
 	Role string
-	ID   sql.NullInt64
+	ID   uint64
 }
 
 func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
@@ -507,7 +508,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 type UpdateUserStatusParams struct {
 	IsActive bool
-	ID       sql.NullInt64
+	ID       uint64
 }
 
 func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {

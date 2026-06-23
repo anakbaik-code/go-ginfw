@@ -3,25 +3,36 @@ package user
 import (
 	"context"
 	"errors"
+	"go-fwgin/internal/config"
+	"go-fwgin/internal/utils"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService interface {
 	Register(ctx context.Context, req *CreateRequest) (*User, error)
-	List(ctx context.Context, page int, limit int) ([]User, error)
+	List(ctx context.Context, page int, limit int) ([]User, int64, error)
 	UpdateProfile(ctx context.Context, user User) error
+	GetActiveUsers(ctx context.Context) ([]User, error)
+	GetByEmail(ctx context.Context, email string) (*User, error)
+	Login(ctx context.Context, req *LoginRequest) (*User, string, string, error)
+	GetById(ctx context.Context, id int64) (*User, error)
 }
 
 type serviceUser struct {
 	repo RepositoryUser
+	config *config.Config
 }
 
-func NewServiceUser(repo RepositoryUser) UserService {
-	return &serviceUser{repo: repo}
+func NewServiceUser(r RepositoryUser,cfg *config.Config) UserService {
+	return &serviceUser{repo: r,config: cfg}
 }
 
 func (s *serviceUser) Register(ctx context.Context, req *CreateRequest) (*User, error) {
+	exist, err := s.repo.GetByEmail(ctx, req.Email)
+	if err == nil && exist != nil {
+		return nil, errors.New("email already exists")
+	}
 	// bcrypt password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -48,7 +59,7 @@ func (s *serviceUser) Register(ctx context.Context, req *CreateRequest) (*User, 
 
 }
 
-func (s *serviceUser) List(ctx context.Context, page int, limit int) ([]User, error) {
+func (s *serviceUser) List(ctx context.Context, page int, limit int) ([]User, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -62,12 +73,21 @@ func (s *serviceUser) List(ctx context.Context, page int, limit int) ([]User, er
 	}
 
 	offset := (page - 1) * limit
-
-	return s.repo.List(
+	users, err := s.repo.List(
 		ctx,
 		int32(limit),
 		int32(offset),
 	)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// count users
+	total, err := s.repo.CountUsers(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
 }
 func (s *serviceUser) UpdateProfile(ctx context.Context, user User) error {
 	if err := s.repo.UpdateProfile(ctx, user); err != nil {
@@ -75,3 +95,69 @@ func (s *serviceUser) UpdateProfile(ctx context.Context, user User) error {
 	}
 	return nil
 }
+
+func (s *serviceUser) DeleteUser(ctx context.Context, id int64) error {
+	err := s.repo.Delete(ctx, id)
+	return err
+}
+
+func (s *serviceUser) GetActiveUsers(ctx context.Context) ([]User, error) {
+	users, err := s.repo.GetActiveUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (s *serviceUser) GetByEmail(ctx context.Context, email string) (*User, error) {
+	user, err := s.repo.GetByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *serviceUser) Login(ctx context.Context, req *LoginRequest) (*User, string, string, error) {
+	u, err := s.repo.GetByEmail(ctx, req.Email)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password))
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	// new access token jwt
+	accessToken, err := utils.GenerateAccessToken(
+		u.ID,
+		u.Role,
+		s.config.JwtSecret,
+		s.config.JwtAccessTokenExp,
+	)
+	if err != nil {
+		return nil, "", "", errors.New("jwt : generate access token failed")
+	}
+	refreshToken, err := utils.GenerateRefreshToken(
+		u.ID,
+		s.config.JwtSecret,
+		s.config.JwtRefreshTokenExp,
+	)
+	if err != nil {
+		return nil, "", "", errors.New("jwt : generate refresh token failed")
+	}
+	// save to repo database
+	if err := s.repo.UpdateRefreshToken(ctx, u.ID, refreshToken); err != nil {
+		return nil, "", "", errors.New("jwt : failed save session login to db")
+	}
+	return u, accessToken, refreshToken, nil
+}
+
+func (s *serviceUser) GetById(ctx context.Context, id int64) (*User, error) {
+	u, err := s.repo.GetById(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+

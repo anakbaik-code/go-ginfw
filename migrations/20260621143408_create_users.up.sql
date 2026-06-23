@@ -1,6 +1,6 @@
 CREATE TABLE
     `users` (
-        `id` BIGINT UNSIGNED AUTO_INCREMENT,
+        `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
         `name` VARCHAR(100) NOT NULL,
         `email` VARCHAR(150) NOT NULL,
         `password_hash` VARCHAR(255) NOT NULL,
@@ -9,8 +9,8 @@ CREATE TABLE
         `role` VARCHAR(30) NOT NULL DEFAULT 'user',
         `is_active` TINYINT (1) NOT NULL DEFAULT 1,
         `refresh_token` VARCHAR(255) DEFAULT NULL,
-        `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         `deleted_at` TIMESTAMP DEFAULT NULL,
         PRIMARY KEY (`id`),
         UNIQUE KEY `users_email_unique` (`email`),

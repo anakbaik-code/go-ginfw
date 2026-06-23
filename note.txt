@@ -1,0 +1,14 @@
+-jwt
+-sqlc
+
+test create user
+{
+    "name": "riko",
+    "email": "riko@example.com",
+    "password": "rahasia123",
+    "role": "admin"
+}
+
+bug 
+- jam bug di db
+- 

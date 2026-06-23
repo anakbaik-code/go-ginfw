@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -25,6 +27,10 @@ type Config struct {
 	// Migrate DB
 	MigrateDatabaseURL string `mapstructure:"MIGRATE_DATABASE_URL"`
 	MigratePath        string `mapstructure:"MIGRATE_PATH"`
+	// JWT Config
+	JwtSecret    string        `mapstructure:"JWT_SECRET"`
+	JwtAccessTokenExp   time.Duration `mapstructure:"JWT_ACCESS_TOKEN_EXP"`  
+	JwtRefreshTokenExp  time.Duration `mapstructure:"JWT_REFRESH_TOKEN_EXP"`
 }
 
 func LoadConfig() (*Config, error) {
