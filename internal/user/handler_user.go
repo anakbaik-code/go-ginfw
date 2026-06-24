@@ -57,7 +57,6 @@ func (h *HandlerUser) ListUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"users": users, "total": total})
 }
 
@@ -165,4 +164,26 @@ func (h *HandlerUser) GetByID(c *gin.Context) {
 		UpdatedAt: u.UpdatedAt,
 	}
 	c.JSON(http.StatusOK, resUser)
+}
+
+func (h *HandlerUser) RefreshToken(c *gin.Context) {
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	// service
+	newAccessToken, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	response := RefreshTokenResponse{
+		AccessToken: newAccessToken,
+	}
+	c.JSON(http.StatusOK, response)
 }

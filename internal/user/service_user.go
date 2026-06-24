@@ -17,15 +17,16 @@ type UserService interface {
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Login(ctx context.Context, req *LoginRequest) (*User, string, string, error)
 	GetById(ctx context.Context, id int64) (*User, error)
+	RefreshToken(ctx context.Context, token string) (string, error)
 }
 
 type serviceUser struct {
-	repo RepositoryUser
+	repo   RepositoryUser
 	config *config.Config
 }
 
-func NewServiceUser(r RepositoryUser,cfg *config.Config) UserService {
-	return &serviceUser{repo: r,config: cfg}
+func NewServiceUser(r RepositoryUser, cfg *config.Config) UserService {
+	return &serviceUser{repo: r, config: cfg}
 }
 
 func (s *serviceUser) Register(ctx context.Context, req *CreateRequest) (*User, error) {
@@ -161,3 +162,26 @@ func (s *serviceUser) GetById(ctx context.Context, id int64) (*User, error) {
 	return u, nil
 }
 
+func (s *serviceUser) RefreshToken(ctx context.Context, token string) (string, error) {
+	u, err := s.repo.GetByRefreshToken(ctx, token)
+	if err != nil {
+		return "", errors.New("jwt : invalid refresh token or session has expired")
+	}
+
+	if !u.IsActive {
+		return "", errors.New("jwt: account is no longer active")
+	}
+
+	// refresh access token
+	accessToken, err := utils.GenerateAccessToken(
+		u.ID,
+		u.Role,
+		s.config.JwtSecret,
+		s.config.JwtAccessTokenExp,
+	)
+	if err != nil {
+		return "", errors.New("jwt : generate access token failed")
+	}
+
+	return accessToken, nil
+}

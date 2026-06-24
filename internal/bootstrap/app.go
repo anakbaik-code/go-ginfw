@@ -22,8 +22,9 @@ func (a *App) Start() error {
 
 	// gin engine
 	r := gin.Default()
-	api := r.Group("/api/v1")
-	a.UserHandler.RoutesUser(api)
+	apiV1 := r.Group("/api/v1")
+	cfg := a.Config
+	a.UserHandler.RoutesUser(apiV1, cfg)
 
 	// run
 	log.Printf("Application [%s] is running on port :%s in %s mode", a.Config.AppName, a.Config.AppPort, a.Config.AppEnv)

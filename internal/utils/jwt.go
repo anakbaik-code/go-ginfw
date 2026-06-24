@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -32,4 +33,27 @@ func GenerateRefreshToken(userID int64, secret string, expiresIn time.Duration) 
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
+}
+
+func ValidateToken(tokenString string, secretKey string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid method signing token")
+		}
+		return []byte(secretKey), nil
+	})
+	if err != nil {
+		// if token expired
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, errors.New("token expred")
+		}
+		return nil, errors.New("token invalid")
+	}
+
+	// Getdata claims
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("failed get data from token")
+	}
+	return claims, nil
 }

@@ -1,3 +1,5 @@
+*.txt
+
 # Environment
 .env
 .env.*
@@ -32,4 +34,3 @@ temp/
 # Air hot reload (kalau pakai)
 .air.toml
 
-.txt

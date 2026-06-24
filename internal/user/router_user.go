@@ -1,15 +1,26 @@
 package user
 
-import "github.com/gin-gonic/gin"
+import (
+	"go-fwgin/internal/config"
+	"go-fwgin/internal/middleware"
 
-func (h *HandlerUser) RoutesUser(rg *gin.RouterGroup) {
+	"github.com/gin-gonic/gin"
+)
+
+func (h *HandlerUser) RoutesUser(rg *gin.RouterGroup, cfg *config.Config) {
 	users := rg.Group("/users")
 	{
 		users.POST("/register", h.Register)
 		users.POST("/login", h.Login)
-		users.GET("", h.ListUser)
-		users.PUT("/:id", h.UpdateUserProfile)
-		users.GET("/:id", h.GetByID)
-		users.GET("/active", h.GetActiveUsers)
+		users.POST("/refresh_token", h.RefreshToken)
+
+		protected := users.Group("", middleware.AuthJwtMiddleware(cfg))
+		{
+			protected.GET("", h.ListUser)
+			protected.PUT("/:id", h.UpdateUserProfile)
+			protected.GET("/:id", h.GetByID)
+			protected.GET("/active", h.GetActiveUsers)
+		}
+
 	}
 }

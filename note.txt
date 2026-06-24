@@ -11,4 +11,31 @@ test create user
 
 bug 
 - jam bug di db
-- 
+
+
+Agenda :
+-> [v] Generate Token JWT
+-> [x] refresh Token JWT
+
+
+1. Gerbang Pendaftaran (POST /register)
+[ ] Strict Input Sanitization & Validation (Format email & XSS protection)
+[ ] Password Strength Enforcement (Minimal 8 karakter, kombinasi uppercase, lowercase, angka, simbol)
+[ ] Unique Credential Check (Email/Username terdaftar)
+[ ] Account Lifecycle State (Default: is_active = false)
+[ ] Token Verification Generator (UUID/Crypto Secure Random String + Expiry Time)
+[ ] Asynchronous Email Dispatching (Kirim OTP/Link via Goroutine atau Message Queue)
+
+2. Gerbang Masuk (POST /login)
+[ ] Account Status Verification (is_active == true dan is_blocked == false)
+[ ] Secure Password Comparison (bcrypt.CompareHashAndPassword)
+[ ] Dual-Token Issuance (Mencetak Access Token & Refresh Token sekaligus)
+[ ] Multi-Factor Authentication / 2FA (Opsional skala tinggi)
+
+3. Gerbang Pembaruan (POST /refresh_token)
+[ ] Refresh Token Rotation (RTR - Otomatis menghanguskan token lama dan menerbitkan token baru)
+[ ] Token Revocation / Blacklisting via Redis (Untuk fitur Log Out)
+
+4. Layer Infrastruktur (DevOps / Nginx)
+[ ] SSL/TLS Encryption (Wajib HTTPS di Production)
+[ ] Web Server Rate Limiting (Anti DDoS & Brute-Force di level Nginx)

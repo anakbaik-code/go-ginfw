@@ -12,6 +12,7 @@ type Config struct {
 	AppEnv     string `mapstructure:"APP_ENV"`
 	AppPort    string `mapstructure:"APP_PORT"`
 	AppTimeout string `mapstructure:"APP_TIMEOUT"`
+	ApiKey     string `mapstructure:"API_KEY"`
 	// Database
 	DBDriver   string `mapstructure:"DB_DRIVER"`
 	DBHost     string `mapstructure:"DB_HOST"`
@@ -28,9 +29,9 @@ type Config struct {
 	MigrateDatabaseURL string `mapstructure:"MIGRATE_DATABASE_URL"`
 	MigratePath        string `mapstructure:"MIGRATE_PATH"`
 	// JWT Config
-	JwtSecret    string        `mapstructure:"JWT_SECRET"`
-	JwtAccessTokenExp   time.Duration `mapstructure:"JWT_ACCESS_TOKEN_EXP"`  
-	JwtRefreshTokenExp  time.Duration `mapstructure:"JWT_REFRESH_TOKEN_EXP"`
+	JwtSecret          string        `mapstructure:"JWT_SECRET"`
+	JwtAccessTokenExp  time.Duration `mapstructure:"JWT_ACCESS_TOKEN_EXP"`
+	JwtRefreshTokenExp time.Duration `mapstructure:"JWT_REFRESH_TOKEN_EXP"`
 }
 
 func LoadConfig() (*Config, error) {
