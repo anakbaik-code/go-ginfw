@@ -7,7 +7,7 @@ import (
 	"database/sql"
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/database"
-	"go-fwgin/internal/user"
+	"go-fwgin/internal/modules/user"
 
 	"github.com/google/wire"
 )

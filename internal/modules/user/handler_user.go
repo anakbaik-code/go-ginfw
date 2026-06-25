@@ -78,7 +78,7 @@ func (h *HandlerUser) UpdateUserProfile(c *gin.Context) {
 		return
 	}
 	user := User{
-		ID:      id,
+		ID:      uint64(id),
 		Name:    req.Name,
 		Phone:   req.Phone,
 		Address: req.Address,

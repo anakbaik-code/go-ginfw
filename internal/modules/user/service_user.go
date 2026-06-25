@@ -21,11 +21,11 @@ type UserService interface {
 }
 
 type serviceUser struct {
-	repo   RepositoryUser
+	repo   UserRepository
 	config *config.Config
 }
 
-func NewServiceUser(r RepositoryUser, cfg *config.Config) UserService {
+func NewServiceUser(r UserRepository, cfg *config.Config) UserService {
 	return &serviceUser{repo: r, config: cfg}
 }
 
@@ -55,7 +55,7 @@ func (s *serviceUser) Register(ctx context.Context, req *CreateRequest) (*User, 
 	if err != nil {
 		return nil, err
 	}
-	user.ID = id
+	user.ID = uint64(id)
 	return user, nil
 
 }
@@ -148,7 +148,7 @@ func (s *serviceUser) Login(ctx context.Context, req *LoginRequest) (*User, stri
 		return nil, "", "", errors.New("jwt : generate refresh token failed")
 	}
 	// save to repo database
-	if err := s.repo.UpdateRefreshToken(ctx, u.ID, refreshToken); err != nil {
+	if err := s.repo.UpdateRefreshToken(ctx, int64(u.ID), refreshToken); err != nil {
 		return nil, "", "", errors.New("jwt : failed save session login to db")
 	}
 	return u, accessToken, refreshToken, nil

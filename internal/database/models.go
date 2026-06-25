@@ -6,8 +6,134 @@ package database
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"time"
 )
+
+type EventsStatus string
+
+const (
+	EventsStatusActive    EventsStatus = "active"
+	EventsStatusInactive  EventsStatus = "inactive"
+	EventsStatusCancelled EventsStatus = "cancelled"
+)
+
+func (e *EventsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EventsStatus(s)
+	case string:
+		*e = EventsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EventsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullEventsStatus struct {
+	EventsStatus EventsStatus
+	Valid        bool // Valid is true if EventsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEventsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.EventsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EventsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEventsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EventsStatus), nil
+}
+
+type TicketsStatus string
+
+const (
+	TicketsStatusBooked    TicketsStatus = "booked"
+	TicketsStatusPaid      TicketsStatus = "paid"
+	TicketsStatusCancelled TicketsStatus = "cancelled"
+	TicketsStatusUsed      TicketsStatus = "used"
+)
+
+func (e *TicketsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketsStatus(s)
+	case string:
+		*e = TicketsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTicketsStatus struct {
+	TicketsStatus TicketsStatus
+	Valid         bool // Valid is true if TicketsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketsStatus), nil
+}
+
+type Category struct {
+	ID        uint32
+	Name      string
+	Slug      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+}
+
+type Event struct {
+	ID          uint64
+	CategoryID  uint32
+	UserID      uint64
+	Title       string
+	Description string
+	Location    string
+	StartTime   time.Time
+	EndTime     time.Time
+	Price       sql.NullString
+	Quota       int32
+	Status      NullEventsStatus
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
+	DeletedAt   sql.NullTime
+}
+
+type Ticket struct {
+	ID         uint64
+	EventID    uint64
+	UserID     uint64
+	TicketCode string
+	Status     NullTicketsStatus
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	DeletedAt  sql.NullTime
+}
 
 type User struct {
 	ID           uint64

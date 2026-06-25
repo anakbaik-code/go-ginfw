@@ -7,7 +7,7 @@ import (
 	"go-fwgin/internal/database"
 )
 
-type RepositoryUser interface {
+type UserRepository interface {
 	Create(ctx context.Context, user *User) (int64, error)
 	List(ctx context.Context, limit int32, offset int32) ([]User, error)
 	UpdateProfile(ctx context.Context, user User) error
@@ -24,7 +24,7 @@ type repositoryUser struct {
 	queries *database.Queries
 }
 
-func NewRepositoryUser(q *database.Queries) RepositoryUser {
+func NewRepositoryUser(q *database.Queries) UserRepository {
 	return &repositoryUser{queries: q}
 }
 
@@ -78,7 +78,7 @@ func (r *repositoryUser) List(ctx context.Context, limit int32, offset int32) ([
 	users := make([]User, 0, len(rows))
 	for _, row := range rows {
 		users = append(users, User{
-			ID:       int64(row.ID),
+			ID:       row.ID,
 			Name:     row.Name,
 			Email:    row.Email,
 			Phone:    row.Phone.String,
@@ -120,7 +120,7 @@ func (r *repositoryUser) GetActiveUsers(ctx context.Context) ([]User, error) {
 	users := make([]User, 0, len(rows))
 	for _, row := range rows {
 		users = append(users, User{
-			ID:        int64(row.ID),
+			ID:        row.ID,
 			Name:      row.Name,
 			Email:     row.Email,
 			Role:      row.Role,
@@ -138,7 +138,7 @@ func (r *repositoryUser) GetByEmail(ctx context.Context, email string) (*User, e
 
 	// Mapping
 	user := &User{
-		ID:           int64(row.ID),
+		ID:           row.ID,
 		Name:         row.Name,
 		Email:        row.Email,
 		PasswordHash: row.PasswordHash,
@@ -161,7 +161,7 @@ func (r *repositoryUser) GetById(ctx context.Context, id int64) (*User, error) {
 		return nil, err
 	}
 	user := &User{
-		ID:        int64(row.ID),
+		ID:        row.ID,
 		Name:      row.Name,
 		Email:     row.Email,
 		Role:      row.Role,
@@ -187,7 +187,7 @@ func (r *repositoryUser) GetByRefreshToken(ctx context.Context, token string) (*
 		return nil, err
 	}
 	user := &User{
-		ID:       int64(row.ID),
+		ID:       row.ID,
 		Name:     row.Name,
 		Email:    row.Email,
 		Role:     row.Role,

@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"go-fwgin/internal/config"
-	"go-fwgin/internal/user"
+	"go-fwgin/internal/modules/user"
 	"log"
 
 	"github.com/gin-gonic/gin"

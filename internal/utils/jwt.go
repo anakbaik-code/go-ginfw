@@ -13,7 +13,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateAccessToken(userId int64, role string, secret string, expiresIn time.Duration) (string, error) {
+func GenerateAccessToken(userId uint64, role string, secret string, expiresIn time.Duration) (string, error) {
 	claims := JWTClaims{
 		UserId: uint64(userId),
 		Role:   role,
@@ -26,7 +26,7 @@ func GenerateAccessToken(userId int64, role string, secret string, expiresIn tim
 	return token.SignedString([]byte(secret))
 }
 
-func GenerateRefreshToken(userID int64, secret string, expiresIn time.Duration) (string, error) {
+func GenerateRefreshToken(userID uint64, secret string, expiresIn time.Duration) (string, error) {
 	claims := jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expiresIn)), // Pakai JwtRefreshTokenExp
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
