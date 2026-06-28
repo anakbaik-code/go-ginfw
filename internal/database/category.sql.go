@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+const countCategories = `-- name: CountCategories :one
+SELECT COUNT(*) FROM categories WHERE deleted_at IS NULL
+`
+
+func (q *Queries) CountCategories(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCategories)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCategory = `-- name: CreateCategory :execresult
 INSERT INTO
     categories (name, slug)
@@ -128,7 +139,13 @@ WHERE
     deleted_at IS NULL
 ORDER BY
     name ASC
+LIMIT ? OFFSET ?
 `
+
+type ListCategoriesParams struct {
+	Limit  int32
+	Offset int32
+}
 
 type ListCategoriesRow struct {
 	ID        uint32
@@ -138,8 +155,8 @@ type ListCategoriesRow struct {
 	UpdatedAt time.Time
 }
 
-func (q *Queries) ListCategories(ctx context.Context) ([]ListCategoriesRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCategories)
+func (q *Queries) ListCategories(ctx context.Context, arg ListCategoriesParams) ([]ListCategoriesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCategories, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

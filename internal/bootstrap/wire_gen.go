@@ -9,6 +9,7 @@ package bootstrap
 import (
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/database"
+	"go-fwgin/internal/modules/category"
 	"go-fwgin/internal/modules/user"
 )
 
@@ -24,12 +25,16 @@ func InitializeApp() (*App, func(), error) {
 		return nil, nil, err
 	}
 	queries := database.New(db)
-	repositoryUser := user.NewRepositoryUser(queries)
-	userService := user.NewServiceUser(repositoryUser, configConfig)
+	userRepository := user.NewRepositoryUser(queries)
+	userService := user.NewServiceUser(userRepository, configConfig)
 	handlerUser := user.NewHandleUser(userService)
+	categoryRepository := category.NewRepositoryCategory(queries)
+	categoryService := category.NewServiceCategory(categoryRepository)
+	handlerCategory := category.NewHandlerCategory(categoryService)
 	app := &App{
-		Config:      configConfig,
-		UserHandler: handlerUser,
+		Config:          configConfig,
+		UserHandler:     handlerUser,
+		CategoryHandler: handlerCategory,
 	}
 	return app, func() {
 		cleanup()

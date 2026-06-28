@@ -16,7 +16,11 @@ FROM
 WHERE
     deleted_at IS NULL
 ORDER BY
-    name ASC;
+    name ASC
+LIMIT ? OFFSET ?;
+
+-- name: CountCategories :one
+SELECT COUNT(*) FROM categories WHERE deleted_at IS NULL;
 
 -- name: GetCategoryByID :one
 SELECT

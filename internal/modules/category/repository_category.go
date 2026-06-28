@@ -6,12 +6,13 @@ import (
 )
 
 type CategoryRepository interface {
-	Create(ctx context.Context, c *Category) (uint32, error)
+	Create(ctx context.Context, c Category) (uint32, error)
 	Delete(ctx context.Context, id uint32) error
 	GetById(ctx context.Context, id uint32) (*Category, error)
-	List(ctx context.Context) ([]Category, error)
-	Update(ctx context.Context, id uint32, c *Category) error
+	List(ctx context.Context, limit int32, offset int32) ([]Category, error)
+	Update(ctx context.Context, c Category) error
 	GetByName(ctx context.Context, name string) (*Category, error)
+	CountCategory(ctx context.Context) (int64, error)
 }
 type repositoryCategory struct {
 	queries *database.Queries
@@ -23,7 +24,7 @@ func NewRepositoryCategory(q *database.Queries) CategoryRepository {
 	}
 }
 
-func (r *repositoryCategory) Create(ctx context.Context, c *Category) (uint32, error) {
+func (r *repositoryCategory) Create(ctx context.Context, c Category) (uint32, error) {
 	result, err := r.queries.CreateCategory(ctx, database.CreateCategoryParams{
 		Name: c.Name,
 		Slug: c.Slug,
@@ -59,8 +60,11 @@ func (r *repositoryCategory) GetById(ctx context.Context, id uint32) (*Category,
 	return category, nil
 }
 
-func (r *repositoryCategory) List(ctx context.Context) ([]Category, error) {
-	rows, err := r.queries.ListCategories(ctx)
+func (r *repositoryCategory) List(ctx context.Context, limit int32, offset int32) ([]Category, error) {
+	rows, err := r.queries.ListCategories(ctx, database.ListCategoriesParams{
+		Limit:  limit,
+		Offset: offset,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +81,17 @@ func (r *repositoryCategory) List(ctx context.Context) ([]Category, error) {
 	return categories, nil
 }
 
-func (r *repositoryCategory) Update(ctx context.Context, id uint32, c *Category) error {
+func (r *repositoryCategory) CountCategory(ctx context.Context) (int64, error) {
+	total, err := r.queries.CountCategories(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *repositoryCategory) Update(ctx context.Context, c Category) error {
 	err := r.queries.UpdateCategory(ctx, database.UpdateCategoryParams{
-		ID:   id,
+		ID:   c.Id,
 		Name: c.Name,
 		Slug: c.Slug,
 	})

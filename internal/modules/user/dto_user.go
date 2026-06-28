@@ -24,7 +24,7 @@ type UserResponse struct {
 
 type ListUserRequest struct {
 	Page  int32 `form:"page" binding:"gte=1"`
-	Limit int32 `form:"limit" binding:"gte=1,lte=100"`
+	Limit int32 `form:"limit" binding:"gte=1"`
 }
 
 type UpdateUserProfileRequest struct {
