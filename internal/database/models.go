@@ -116,8 +116,8 @@ type Event struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	Price       sql.NullString
-	Quota       int32
+	Price       uint32
+	Quota       uint32
 	Status      NullEventsStatus
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime

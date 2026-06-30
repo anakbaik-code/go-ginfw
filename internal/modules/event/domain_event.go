@@ -1,6 +1,9 @@
 package event
 
-import "time"
+import (
+	"go-fwgin/internal/database"
+	"time"
+)
 
 type Event struct {
 	ID          uint64
@@ -11,10 +14,20 @@ type Event struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	Price       float64
-	Quota       int32
-	Status      string
+	Price       uint32
+	Quota       uint32
+	Status      database.EventsStatus
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	DeletedAt   *time.Time
+}
+type EventWithDetails struct {
+	Event
+	CategoryName   string
+	OrganizerName  string
+	AvailableQuota int32
+}
+
+type EventStatus struct {
+	Status database.EventsStatus
 }

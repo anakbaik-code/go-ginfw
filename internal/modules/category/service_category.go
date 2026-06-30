@@ -77,10 +77,6 @@ func (s *categoryService) List(ctx context.Context, page int32, limit int32) ([]
 		limit = 10
 	}
 
-	if limit > 100 {
-		limit = 100
-	}
-
 	offset := (page - 1) * limit
 	categories, err := s.repo.List(ctx, limit, offset)
 	if err != nil {

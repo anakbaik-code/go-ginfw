@@ -29,7 +29,7 @@ func (h *HandlerCategory) Create(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, "Category created successfully", category)
+	response.Success(c, http.StatusCreated, "Category created successfully", category)
 }
 
 // 2. GET BY ID

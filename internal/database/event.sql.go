@@ -11,6 +11,38 @@ import (
 	"time"
 )
 
+const countEventsByStatus = `-- name: CountEventsByStatus :one
+SELECT COUNT(*)
+FROM events e
+JOIN categories c ON e.category_id = c.id
+WHERE
+    e.status = ?
+    AND e.deleted_at IS NULL
+    AND c.deleted_at IS NULL
+`
+
+func (q *Queries) CountEventsByStatus(ctx context.Context, status NullEventsStatus) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countEventsByStatus, status)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countMyEvents = `-- name: CountMyEvents :one
+SELECT COUNT(*)
+FROM events e
+WHERE
+    e.user_id = ?
+    AND e.deleted_at IS NULL
+`
+
+func (q *Queries) CountMyEvents(ctx context.Context, userID uint64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countMyEvents, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createEvent = `-- name: CreateEvent :execresult
 INSERT INTO
     events (
@@ -37,8 +69,8 @@ type CreateEventParams struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	Price       sql.NullString
-	Quota       int32
+	Price       uint32
+	Quota       uint32
 	Status      NullEventsStatus
 }
 
@@ -60,7 +92,7 @@ func (q *Queries) CreateEvent(ctx context.Context, arg CreateEventParams) (sql.R
 const deleteEvent = `-- name: DeleteEvent :exec
 UPDATE events
 SET
-    deleted_at = NOW()
+    deleted_at = NOW
 WHERE
     id = ?
 `
@@ -119,8 +151,8 @@ type GetEventByIDRow struct {
 	Location       string
 	StartTime      time.Time
 	EndTime        time.Time
-	Price          sql.NullString
-	Quota          int32
+	Price          uint32
+	Quota          uint32
 	Status         NullEventsStatus
 	CreatedAt      sql.NullTime
 	CategoryName   string
@@ -151,7 +183,7 @@ func (q *Queries) GetEventByID(ctx context.Context, id uint64) (GetEventByIDRow,
 	return i, err
 }
 
-const listEventsActive = `-- name: ListEventsActive :many
+const getMyEventByID = `-- name: GetMyEventByID :one
 SELECT
     e.id,
     e.title,
@@ -165,7 +197,82 @@ SELECT
     e.created_at,
     c.name AS category_name,
     u.name AS organizer_name,
-    -- Menghitung sisa tiket secara real-time dari tiket yang berstatus 'paid'
+    (
+        e.quota - (
+            SELECT COUNT(*)
+            FROM tickets t
+            WHERE
+                t.event_id = e.id
+                AND t.status = 'paid'
+                AND t.deleted_at IS NULL
+        )
+    ) AS available_quota
+FROM events e
+JOIN categories c ON e.category_id = c.id
+JOIN users u ON e.user_id = u.id
+WHERE
+    e.id = ?
+    AND e.user_id = ?
+    AND e.deleted_at IS NULL
+    AND c.deleted_at IS NULL
+`
+
+type GetMyEventByIDParams struct {
+	ID     uint64
+	UserID uint64
+}
+
+type GetMyEventByIDRow struct {
+	ID             uint64
+	Title          string
+	Description    string
+	Location       string
+	StartTime      time.Time
+	EndTime        time.Time
+	Price          uint32
+	Quota          uint32
+	Status         NullEventsStatus
+	CreatedAt      sql.NullTime
+	CategoryName   string
+	OrganizerName  string
+	AvailableQuota int32
+}
+
+func (q *Queries) GetMyEventByID(ctx context.Context, arg GetMyEventByIDParams) (GetMyEventByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getMyEventByID, arg.ID, arg.UserID)
+	var i GetMyEventByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Location,
+		&i.StartTime,
+		&i.EndTime,
+		&i.Price,
+		&i.Quota,
+		&i.Status,
+		&i.CreatedAt,
+		&i.CategoryName,
+		&i.OrganizerName,
+		&i.AvailableQuota,
+	)
+	return i, err
+}
+
+const listEventsByStatus = `-- name: ListEventsByStatus :many
+SELECT
+    e.id,
+    e.title,
+    e.description,
+    e.location,
+    e.start_time,
+    e.end_time,
+    e.price,
+    e.quota,
+    e.status,
+    e.created_at,
+    c.name AS category_name,
+    u.name AS organizer_name,
     (
         e.quota - (
             SELECT
@@ -183,23 +290,32 @@ FROM
     JOIN categories c ON e.category_id = c.id
     JOIN users u ON e.user_id = u.id
 WHERE
-    e.status = 'active'
-    AND e.end_time > NOW()
+    e.status = ?
     AND e.deleted_at IS NULL
     AND c.deleted_at IS NULL
 ORDER BY
     e.start_time ASC
+LIMIT
+    ?
+OFFSET
+    ?
 `
 
-type ListEventsActiveRow struct {
+type ListEventsByStatusParams struct {
+	Status NullEventsStatus
+	Limit  int32
+	Offset int32
+}
+
+type ListEventsByStatusRow struct {
 	ID             uint64
 	Title          string
 	Description    string
 	Location       string
 	StartTime      time.Time
 	EndTime        time.Time
-	Price          sql.NullString
-	Quota          int32
+	Price          uint32
+	Quota          uint32
 	Status         NullEventsStatus
 	CreatedAt      sql.NullTime
 	CategoryName   string
@@ -207,16 +323,111 @@ type ListEventsActiveRow struct {
 	AvailableQuota int32
 }
 
-// Hanya menampilkan event yang aktif, belum kedaluwarsa, dan belum di-soft delete
-func (q *Queries) ListEventsActive(ctx context.Context) ([]ListEventsActiveRow, error) {
-	rows, err := q.db.QueryContext(ctx, listEventsActive)
+func (q *Queries) ListEventsByStatus(ctx context.Context, arg ListEventsByStatusParams) ([]ListEventsByStatusRow, error) {
+	rows, err := q.db.QueryContext(ctx, listEventsByStatus, arg.Status, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListEventsActiveRow
+	var items []ListEventsByStatusRow
 	for rows.Next() {
-		var i ListEventsActiveRow
+		var i ListEventsByStatusRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Location,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Price,
+			&i.Quota,
+			&i.Status,
+			&i.CreatedAt,
+			&i.CategoryName,
+			&i.OrganizerName,
+			&i.AvailableQuota,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMyEvents = `-- name: ListMyEvents :many
+SELECT
+    e.id,
+    e.title,
+    e.description,
+    e.location,
+    e.start_time,
+    e.end_time,
+    e.price,
+    e.quota,
+    e.status,
+    e.created_at,
+    c.name AS category_name,
+    u.name AS organizer_name,
+    (
+        e.quota - (
+            SELECT COUNT(*)
+            FROM tickets t
+            WHERE
+                t.event_id = e.id
+                AND t.status = 'paid'
+                AND t.deleted_at IS NULL
+        )
+    ) AS available_quota
+FROM events e
+JOIN categories c ON e.category_id = c.id
+JOIN users u ON e.user_id = u.id
+WHERE
+    e.user_id = ?
+    AND e.deleted_at IS NULL
+    AND c.deleted_at IS NULL
+ORDER BY
+    e.created_at DESC
+LIMIT ?
+OFFSET ?
+`
+
+type ListMyEventsParams struct {
+	UserID uint64
+	Limit  int32
+	Offset int32
+}
+
+type ListMyEventsRow struct {
+	ID             uint64
+	Title          string
+	Description    string
+	Location       string
+	StartTime      time.Time
+	EndTime        time.Time
+	Price          uint32
+	Quota          uint32
+	Status         NullEventsStatus
+	CreatedAt      sql.NullTime
+	CategoryName   string
+	OrganizerName  string
+	AvailableQuota int32
+}
+
+func (q *Queries) ListMyEvents(ctx context.Context, arg ListMyEventsParams) ([]ListMyEventsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMyEvents, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMyEventsRow
+	for rows.Next() {
+		var i ListMyEventsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
@@ -269,8 +480,8 @@ type UpdateEventParams struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	Price       sql.NullString
-	Quota       int32
+	Price       uint32
+	Quota       uint32
 	Status      NullEventsStatus
 	ID          uint64
 }

@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/modules/category"
+	"go-fwgin/internal/modules/event"
 	"go-fwgin/internal/modules/user"
 	"log"
 
@@ -13,6 +14,7 @@ type App struct {
 	Config          *config.Config
 	UserHandler     *user.HandlerUser
 	CategoryHandler *category.HandlerCategory
+	EventHandler    *event.HandlerEvent
 }
 
 func (a *App) Start() error {
@@ -28,8 +30,8 @@ func (a *App) Start() error {
 	cfg := a.Config
 	a.UserHandler.RoutesUser(apiV1, cfg)
 	a.CategoryHandler.RoutesUser(apiV1, cfg)
+	a.EventHandler.RoutesEvent(apiV1, cfg)
 
-	
 	// run
 	log.Printf("Application [%s] is running on port :%s in %s mode", a.Config.AppName, a.Config.AppPort, a.Config.AppEnv)
 	return r.Run(a.Config.AppPort)
