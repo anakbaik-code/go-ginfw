@@ -9,7 +9,6 @@ type RequestCreateEvent struct {
 	Location    string    `json:"location" binding:"required"`
 	StartTime   time.Time `json:"start_time" binding:"required"`
 	EndTime     time.Time `json:"end_time" binding:"required"`
-	Price       uint32    `json:"price"`
 	Quota       uint32    `json:"quota" binding:"required"`
 	Status      string    `json:"status"`
 }
@@ -20,8 +19,6 @@ type RequestUpdateEvent struct {
 	Location    string    `json:"location" binding:"required"`
 	StartTime   time.Time `json:"start_time" binding:"required"`
 	EndTime     time.Time `json:"end_time" binding:"required"`
-	Price       uint32    `json:"price"`
-	Quota       uint32    `json:"quota" binding:"required"`
 }
 type EventResponse struct {
 	ID             uint64    `json:"id"`
@@ -32,8 +29,6 @@ type EventResponse struct {
 	Location       string    `json:"location"`
 	StartTime      time.Time `json:"start_time"`
 	EndTime        time.Time `json:"end_time"`
-	Price          uint32    `json:"price"`
-	Quota          uint32    `json:"quota"`
 	AvailableQuota uint32    `json:"available_quota"`
 	Status         string    `json:"status"`
 	CreatedAt      time.Time `json:"created_at"`

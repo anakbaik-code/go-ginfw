@@ -8,12 +8,6 @@ import (
 )
 
 func (h *HandlerEvent) RoutesEvent(r *gin.RouterGroup, cfg *config.Config) {
-	// Public routes
-	events := r.Group("/events")
-	{
-		events.GET("", h.ListActive) // GET /events?page=1&limit=10
-		events.GET("/:id", h.GetByID)
-	}
 
 	// Organizer routes
 	organizer := r.Group("/events")
@@ -29,6 +23,13 @@ func (h *HandlerEvent) RoutesEvent(r *gin.RouterGroup, cfg *config.Config) {
 
 		organizer.GET("/inactive", h.ListInactive)
 		organizer.GET("/cancelled", h.ListCancelled)
+	}
+
+	// Public routes
+	events := r.Group("/events")
+	{
+		events.GET("", h.ListActive) // GET /events?page=1&limit=10
+		events.GET("/:id", h.GetByID)
 	}
 
 	// My Events

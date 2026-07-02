@@ -19,6 +19,9 @@ migrate-version:
 migrate-create:
 		migrate create -ext sql -dir migrations $(name)
 
+migrate-downall:
+		migrate -path $(MIGRATE_PATH) -database "$(MIGRATE_DATABASE_URL)" down -all
+		
 # ===== SQLC =====
 sqlc:
 	sqlc generate

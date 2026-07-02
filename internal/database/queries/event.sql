@@ -8,12 +8,10 @@ INSERT INTO
         location,
         start_time,
         end_time,
-        price,
-        quota,
         status
     )
 VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    (?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListEventsByStatus :many
 SELECT
@@ -23,23 +21,35 @@ SELECT
     e.location,
     e.start_time,
     e.end_time,
-    e.price,
-    e.quota,
     e.status,
     e.created_at,
     c.name AS category_name,
     u.name AS organizer_name,
-    (
-        e.quota - (
+    -- 1. Hitung total kuota asli dari semua ticket_types di event ini
+    COALESCE(
+        (
+            SELECT
+                SUM(tt.quota)
+            FROM
+                ticket_types tt
+            WHERE
+                tt.event_id = e.id
+        ),
+        0
+    ) -
+    -- 2. Dikurangi jumlah tiket yang sudah sukses terjual (paid)
+    COALESCE(
+        (
             SELECT
                 COUNT(*)
             FROM
-                tickets t
+                payments p
             WHERE
-                t.event_id = e.id
-                AND t.status = 'paid'
-                AND t.deleted_at IS NULL
-        )
+                p.event_id = e.id
+                AND p.status = 'paid'
+                AND p.deleted_at IS NULL
+        ),
+        0
     ) AS available_quota
 FROM
     events e
@@ -64,37 +74,56 @@ SELECT
     e.location,
     e.start_time,
     e.end_time,
-    e.price,
-    e.quota,
     e.status,
     e.created_at,
     c.name AS category_name,
     u.name AS organizer_name,
-    (
-        e.quota - (
-            SELECT COUNT(*)
-            FROM tickets t
+    -- 1. Hitung total kuota asli dari semua ticket_types di event milik saya ini
+    COALESCE(
+        (
+            SELECT
+                SUM(tt.quota)
+            FROM
+                ticket_types tt
             WHERE
-                t.event_id = e.id
-                AND t.status = 'paid'
-                AND t.deleted_at IS NULL
-        )
+                tt.event_id = e.id
+        ),
+        0
+    ) -
+    -- 2. Dikurangi jumlah tiket yang sudah sukses terjual (paid)
+    COALESCE(
+        (
+            SELECT
+                COUNT(*)
+            FROM
+                payments p
+            WHERE
+                p.event_id = e.id
+                AND p.status = 'paid'
+                AND p.deleted_at IS NULL
+        ),
+        0
     ) AS available_quota
-FROM events e
-JOIN categories c ON e.category_id = c.id
-JOIN users u ON e.user_id = u.id
+FROM
+    events e
+    JOIN categories c ON e.category_id = c.id
+    JOIN users u ON e.user_id = u.id
 WHERE
     e.user_id = ?
     AND e.deleted_at IS NULL
     AND c.deleted_at IS NULL
 ORDER BY
     e.created_at DESC
-LIMIT ?
-OFFSET ?;
+LIMIT
+    ?
+OFFSET
+    ?;
 
 -- name: CountMyEvents :one
-SELECT COUNT(*)
-FROM events e
+SELECT
+    COUNT(*)
+FROM
+    events e
 WHERE
     e.user_id = ?
     AND e.deleted_at IS NULL;
@@ -107,25 +136,40 @@ SELECT
     e.location,
     e.start_time,
     e.end_time,
-    e.price,
-    e.quota,
     e.status,
     e.created_at,
     c.name AS category_name,
     u.name AS organizer_name,
-    (
-        e.quota - (
-            SELECT COUNT(*)
-            FROM tickets t
+    -- 1. Hitung total kuota dari semua jenis tiket di event ini
+    COALESCE(
+        (
+            SELECT
+                SUM(tt.quota)
+            FROM
+                ticket_types tt
             WHERE
-                t.event_id = e.id
-                AND t.status = 'paid'
-                AND t.deleted_at IS NULL
-        )
+                tt.event_id = e.id
+        ),
+        0
+    ) -
+    -- 2. Dikurangi total tiket yang sudah terjual (paid)
+    COALESCE(
+        (
+            SELECT
+                COUNT(*)
+            FROM
+                payments p
+            WHERE
+                p.event_id = e.id
+                AND p.status = 'paid'
+                AND p.deleted_at IS NULL
+        ),
+        0
     ) AS available_quota
-FROM events e
-JOIN categories c ON e.category_id = c.id
-JOIN users u ON e.user_id = u.id
+FROM
+    events e
+    JOIN categories c ON e.category_id = c.id
+    JOIN users u ON e.user_id = u.id
 WHERE
     e.id = ?
     AND e.user_id = ?
@@ -142,23 +186,35 @@ SELECT
     e.location,
     e.start_time,
     e.end_time,
-    e.price,
-    e.quota,
     e.status,
     e.created_at,
     c.name AS category_name,
     u.name AS organizer_name,
-    (
-        e.quota - (
+    -- 1. Hitung total kuota asli dari semua ticket_types di event ini
+    COALESCE(
+        (
+            SELECT
+                SUM(tt.quota)
+            FROM
+                ticket_types tt
+            WHERE
+                tt.event_id = e.id
+        ),
+        0
+    ) -
+    -- 2. Dikurangi jumlah tiket yang sudah sukses terjual (paid)
+    COALESCE(
+        (
             SELECT
                 COUNT(*)
             FROM
-                tickets t
+                payments p
             WHERE
-                t.event_id = e.id
-                AND t.status = 'paid'
-                AND t.deleted_at IS NULL
-        )
+                p.event_id = e.id
+                AND p.status = 'paid'
+                AND p.deleted_at IS NULL
+        ),
+        0
     ) AS available_quota
 FROM
     events e
@@ -179,8 +235,6 @@ SET
     location = ?,
     start_time = ?,
     end_time = ?,
-    price = ?,
-    quota = ?,
     status = ?
 WHERE
     id = ?
@@ -204,9 +258,11 @@ WHERE
     id = ?;
 
 -- name: CountEventsByStatus :one
-SELECT COUNT(*)
-FROM events e
-JOIN categories c ON e.category_id = c.id
+SELECT
+    COUNT(*)
+FROM
+    events e
+    JOIN categories c ON e.category_id = c.id
 WHERE
     e.status = ?
     AND e.deleted_at IS NULL

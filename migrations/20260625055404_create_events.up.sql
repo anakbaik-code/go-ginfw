@@ -8,8 +8,6 @@ CREATE TABLE
         location VARCHAR(255) NOT NULL,
         start_time TIMESTAMP NOT NULL,
         end_time TIMESTAMP NOT NULL,
-        price INT UNSIGNED NOT NULL DEFAULT 0,
-        quota INT UNSIGNED NOT NULL DEFAULT 0,
         status ENUM ('active', 'inactive', 'cancelled') DEFAULT 'active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

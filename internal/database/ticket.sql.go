@@ -8,144 +8,172 @@ package database
 import (
 	"context"
 	"database/sql"
-	"time"
 )
 
-const bookTicket = `-- name: BookTicket :execresult
-INSERT INTO
-    tickets (event_id, user_id, ticket_code, status)
-VALUES
-    (?, ?, ?, ?)
-`
-
-type BookTicketParams struct {
-	EventID    uint64
-	UserID     uint64
-	TicketCode string
-	Status     NullTicketsStatus
-}
-
-// Dipakai saat warga klik "Booking" (Status default: 'booked')
-func (q *Queries) BookTicket(ctx context.Context, arg BookTicketParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, bookTicket,
-		arg.EventID,
-		arg.UserID,
-		arg.TicketCode,
-		arg.Status,
-	)
-}
-
-const getTicketByCode = `-- name: GetTicketByCode :one
-SELECT
-    t.id,
-    t.event_id,
-    t.user_id,
-    t.ticket_code,
-    t.status,
-    t.created_at,
-    e.title AS event_title,
-    e.start_time AS event_start_time,
-    u.name AS attendee_name
-FROM
-    tickets t
-    JOIN events e ON t.event_id = e.id
-    JOIN users u ON t.user_id = u.id
+const checkInTicket = `-- name: CheckInTicket :exec
+UPDATE tickets
+SET
+    status = 'used',
+    checked_in_at = CURRENT_TIMESTAMP
 WHERE
-    t.ticket_code = ?
-    AND t.deleted_at IS NULL
-LIMIT
-    1
+    id = ?
 `
 
-type GetTicketByCodeRow struct {
-	ID             uint64
-	EventID        uint64
-	UserID         uint64
-	TicketCode     string
-	Status         NullTicketsStatus
-	CreatedAt      time.Time
-	EventTitle     string
-	EventStartTime time.Time
-	AttendeeName   string
+func (q *Queries) CheckInTicket(ctx context.Context, id uint64) error {
+	_, err := q.db.ExecContext(ctx, checkInTicket, id)
+	return err
 }
 
-// Dipakai pas panitia nge-scan QR Code tiket di gerbang masuk
-func (q *Queries) GetTicketByCode(ctx context.Context, ticketCode string) (GetTicketByCodeRow, error) {
-	row := q.db.QueryRowContext(ctx, getTicketByCode, ticketCode)
-	var i GetTicketByCodeRow
-	err := row.Scan(
-		&i.ID,
-		&i.EventID,
-		&i.UserID,
-		&i.TicketCode,
-		&i.Status,
-		&i.CreatedAt,
-		&i.EventTitle,
-		&i.EventStartTime,
-		&i.AttendeeName,
+const countTicketsByOrderItemID = `-- name: CountTicketsByOrderItemID :one
+SELECT
+    COUNT(*)
+FROM
+    tickets
+WHERE
+    order_item_id = ?
+`
+
+func (q *Queries) CountTicketsByOrderItemID(ctx context.Context, orderItemID uint64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countTicketsByOrderItemID, orderItemID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const createTicket = `-- name: CreateTicket :execresult
+INSERT INTO
+    tickets (
+        order_item_id,
+        ticket_code,
+        qr_code,
+        status,
+        checked_in_at
+    )
+VALUES
+    (?, ?, ?, ?, ?)
+`
+
+type CreateTicketParams struct {
+	OrderItemID uint64
+	TicketCode  sql.NullString
+	QrCode      sql.NullString
+	Status      sql.NullString
+	CheckedInAt sql.NullTime
+}
+
+func (q *Queries) CreateTicket(ctx context.Context, arg CreateTicketParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createTicket,
+		arg.OrderItemID,
+		arg.TicketCode,
+		arg.QrCode,
+		arg.Status,
+		arg.CheckedInAt,
 	)
-	return i, err
 }
 
-const hardDeleteTicket = `-- name: HardDeleteTicket :exec
+const deleteTicket = `-- name: DeleteTicket :exec
 DELETE FROM tickets
 WHERE
     id = ?
 `
 
-// Hapus fisik dari disk (Khusus clean up data testing)
-func (q *Queries) HardDeleteTicket(ctx context.Context, id uint64) error {
-	_, err := q.db.ExecContext(ctx, hardDeleteTicket, id)
+func (q *Queries) DeleteTicket(ctx context.Context, id uint64) error {
+	_, err := q.db.ExecContext(ctx, deleteTicket, id)
 	return err
 }
 
-const listMyTickets = `-- name: ListMyTickets :many
+const getTicketByCode = `-- name: GetTicketByCode :one
 SELECT
-    t.id,
-    t.ticket_code,
-    t.status,
-    t.created_at,
-    e.title AS event_title,
-    e.location AS event_location,
-    e.start_time AS event_start_time
+    id,
+    order_item_id,
+    ticket_code,
+    qr_code,
+    status,
+    checked_in_at
 FROM
-    tickets t
-    JOIN events e ON t.event_id = e.id
+    tickets
 WHERE
-    t.user_id = ?
-    AND t.deleted_at IS NULL
-ORDER BY
-    t.created_at DESC
+    ticket_code = ?
+LIMIT
+    1
 `
 
-type ListMyTicketsRow struct {
-	ID             uint64
-	TicketCode     string
-	Status         NullTicketsStatus
-	CreatedAt      time.Time
-	EventTitle     string
-	EventLocation  string
-	EventStartTime time.Time
+func (q *Queries) GetTicketByCode(ctx context.Context, ticketCode sql.NullString) (Ticket, error) {
+	row := q.db.QueryRowContext(ctx, getTicketByCode, ticketCode)
+	var i Ticket
+	err := row.Scan(
+		&i.ID,
+		&i.OrderItemID,
+		&i.TicketCode,
+		&i.QrCode,
+		&i.Status,
+		&i.CheckedInAt,
+	)
+	return i, err
 }
 
-// Dipakai di aplikasi mobile/web warga buat lihat daftar tiket yang mereka beli
-func (q *Queries) ListMyTickets(ctx context.Context, userID uint64) ([]ListMyTicketsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMyTickets, userID)
+const getTicketByID = `-- name: GetTicketByID :one
+SELECT
+    id,
+    order_item_id,
+    ticket_code,
+    qr_code,
+    status,
+    checked_in_at
+FROM
+    tickets
+WHERE
+    id = ?
+LIMIT
+    1
+`
+
+func (q *Queries) GetTicketByID(ctx context.Context, id uint64) (Ticket, error) {
+	row := q.db.QueryRowContext(ctx, getTicketByID, id)
+	var i Ticket
+	err := row.Scan(
+		&i.ID,
+		&i.OrderItemID,
+		&i.TicketCode,
+		&i.QrCode,
+		&i.Status,
+		&i.CheckedInAt,
+	)
+	return i, err
+}
+
+const listTicketsByOrderItemID = `-- name: ListTicketsByOrderItemID :many
+SELECT
+    id,
+    order_item_id,
+    ticket_code,
+    qr_code,
+    status,
+    checked_in_at
+FROM
+    tickets
+WHERE
+    order_item_id = ?
+ORDER BY
+    id ASC
+`
+
+func (q *Queries) ListTicketsByOrderItemID(ctx context.Context, orderItemID uint64) ([]Ticket, error) {
+	rows, err := q.db.QueryContext(ctx, listTicketsByOrderItemID, orderItemID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListMyTicketsRow
+	var items []Ticket
 	for rows.Next() {
-		var i ListMyTicketsRow
+		var i Ticket
 		if err := rows.Scan(
 			&i.ID,
+			&i.OrderItemID,
 			&i.TicketCode,
+			&i.QrCode,
 			&i.Status,
-			&i.CreatedAt,
-			&i.EventTitle,
-			&i.EventLocation,
-			&i.EventStartTime,
+			&i.CheckedInAt,
 		); err != nil {
 			return nil, err
 		}
@@ -160,37 +188,37 @@ func (q *Queries) ListMyTickets(ctx context.Context, userID uint64) ([]ListMyTic
 	return items, nil
 }
 
-const softDeleteTicket = `-- name: SoftDeleteTicket :exec
+const updateTicketQRCode = `-- name: UpdateTicketQRCode :exec
 UPDATE tickets
 SET
-    deleted_at = NOW(),
-    status = 'cancelled'
+    qr_code = ?
 WHERE
     id = ?
 `
 
-// Membatalkan tiket tanpa menghapus history finansial
-func (q *Queries) SoftDeleteTicket(ctx context.Context, id uint64) error {
-	_, err := q.db.ExecContext(ctx, softDeleteTicket, id)
+type UpdateTicketQRCodeParams struct {
+	QrCode sql.NullString
+	ID     uint64
+}
+
+func (q *Queries) UpdateTicketQRCode(ctx context.Context, arg UpdateTicketQRCodeParams) error {
+	_, err := q.db.ExecContext(ctx, updateTicketQRCode, arg.QrCode, arg.ID)
 	return err
 }
 
 const updateTicketStatus = `-- name: UpdateTicketStatus :exec
 UPDATE tickets
 SET
-    status = ?,
-    updated_at = NOW()
+    status = ?
 WHERE
     id = ?
-    AND deleted_at IS NULL
 `
 
 type UpdateTicketStatusParams struct {
-	Status NullTicketsStatus
+	Status sql.NullString
 	ID     uint64
 }
 
-// Dipakai pas pembayaran lunas ('paid') atau pas tiket di-scan masuk ('used')
 func (q *Queries) UpdateTicketStatus(ctx context.Context, arg UpdateTicketStatusParams) error {
 	_, err := q.db.ExecContext(ctx, updateTicketStatus, arg.Status, arg.ID)
 	return err

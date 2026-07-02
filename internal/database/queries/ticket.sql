@@ -1,72 +1,91 @@
--- name: BookTicket :execresult
--- Dipakai saat warga klik "Booking" (Status default: 'booked')
+-- name: CreateTicket :execresult
 INSERT INTO
-    tickets (event_id, user_id, ticket_code, status)
+    tickets (
+        order_item_id,
+        ticket_code,
+        qr_code,
+        status,
+        checked_in_at
+    )
 VALUES
-    (?, ?, ?, ?);
+    (?, ?, ?, ?, ?);
 
--- name: GetTicketByCode :one
--- Dipakai pas panitia nge-scan QR Code tiket di gerbang masuk
+-- name: GetTicketByID :one
 SELECT
-    t.id,
-    t.event_id,
-    t.user_id,
-    t.ticket_code,
-    t.status,
-    t.created_at,
-    e.title AS event_title,
-    e.start_time AS event_start_time,
-    u.name AS attendee_name
+    id,
+    order_item_id,
+    ticket_code,
+    qr_code,
+    status,
+    checked_in_at
 FROM
-    tickets t
-    JOIN events e ON t.event_id = e.id
-    JOIN users u ON t.user_id = u.id
+    tickets
 WHERE
-    t.ticket_code = ?
-    AND t.deleted_at IS NULL
+    id = ?
 LIMIT
     1;
 
--- name: ListMyTickets :many
--- Dipakai di aplikasi mobile/web warga buat lihat daftar tiket yang mereka beli
+-- name: GetTicketByCode :one
 SELECT
-    t.id,
-    t.ticket_code,
-    t.status,
-    t.created_at,
-    e.title AS event_title,
-    e.location AS event_location,
-    e.start_time AS event_start_time
+    id,
+    order_item_id,
+    ticket_code,
+    qr_code,
+    status,
+    checked_in_at
 FROM
-    tickets t
-    JOIN events e ON t.event_id = e.id
+    tickets
 WHERE
-    t.user_id = ?
-    AND t.deleted_at IS NULL
+    ticket_code = ?
+LIMIT
+    1;
+
+-- name: ListTicketsByOrderItemID :many
+SELECT
+    id,
+    order_item_id,
+    ticket_code,
+    qr_code,
+    status,
+    checked_in_at
+FROM
+    tickets
+WHERE
+    order_item_id = ?
 ORDER BY
-    t.created_at DESC;
+    id ASC;
 
--- name: UpdateTicketStatus :exec
--- Dipakai pas pembayaran lunas ('paid') atau pas tiket di-scan masuk ('used')
+-- name: UpdateTicketQRCode :exec
 UPDATE tickets
 SET
-    status = ?,
-    updated_at = NOW()
-WHERE
-    id = ?
-    AND deleted_at IS NULL;
-
--- name: SoftDeleteTicket :exec
--- Membatalkan tiket tanpa menghapus history finansial
-UPDATE tickets
-SET
-    deleted_at = NOW(),
-    status = 'cancelled'
+    qr_code = ?
 WHERE
     id = ?;
 
--- name: HardDeleteTicket :exec
--- Hapus fisik dari disk (Khusus clean up data testing)
+-- name: UpdateTicketStatus :exec
+UPDATE tickets
+SET
+    status = ?
+WHERE
+    id = ?;
+
+-- name: CheckInTicket :exec
+UPDATE tickets
+SET
+    status = 'used',
+    checked_in_at = CURRENT_TIMESTAMP
+WHERE
+    id = ?;
+
+-- name: CountTicketsByOrderItemID :one
+SELECT
+    COUNT(*)
+FROM
+    tickets
+WHERE
+    order_item_id = ?;
+
+-- name: DeleteTicket :exec
 DELETE FROM tickets
 WHERE
     id = ?;

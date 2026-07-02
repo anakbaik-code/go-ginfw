@@ -14,8 +14,6 @@ type Event struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	Price       uint32
-	Quota       uint32
 	Status      database.EventsStatus
 	CreatedAt   time.Time
 	UpdatedAt   time.Time

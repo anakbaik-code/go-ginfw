@@ -12,8 +12,6 @@ func ToEventResponse(e EventWithDetails) EventResponse {
 		Location:       e.Location,
 		StartTime:      e.StartTime,
 		EndTime:        e.EndTime,
-		Price:          e.Price,
-		Quota:          e.Quota,
 		AvailableQuota: uint32(e.AvailableQuota),
 		Status:         string(e.Status),
 		CreatedAt:      e.CreatedAt,
@@ -37,8 +35,6 @@ func ToEvent(req RequestCreateEvent, userID uint64) Event {
 		Location:    req.Location,
 		StartTime:   req.StartTime,
 		EndTime:     req.EndTime,
-		Price:       req.Price,
-		Quota:       req.Quota,
 		Status:      database.EventsStatus(req.Status),
 	}
 }
@@ -52,8 +48,6 @@ func ToUpdateEvent(id uint64, userID uint64, req RequestUpdateEvent) Event {
 		Location:    req.Location,
 		StartTime:   req.StartTime,
 		EndTime:     req.EndTime,
-		Price:       req.Price,
-		Quota:       req.Quota,
 	}
 }
 

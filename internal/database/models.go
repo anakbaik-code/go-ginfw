@@ -54,48 +54,94 @@ func (ns NullEventsStatus) Value() (driver.Value, error) {
 	return string(ns.EventsStatus), nil
 }
 
-type TicketsStatus string
+type OrdersStatus string
 
 const (
-	TicketsStatusBooked    TicketsStatus = "booked"
-	TicketsStatusPaid      TicketsStatus = "paid"
-	TicketsStatusCancelled TicketsStatus = "cancelled"
-	TicketsStatusUsed      TicketsStatus = "used"
+	OrdersStatusPending   OrdersStatus = "pending"
+	OrdersStatusPaid      OrdersStatus = "paid"
+	OrdersStatusCancelled OrdersStatus = "cancelled"
+	OrdersStatusRefunded  OrdersStatus = "refunded"
 )
 
-func (e *TicketsStatus) Scan(src interface{}) error {
+func (e *OrdersStatus) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*e = TicketsStatus(s)
+		*e = OrdersStatus(s)
 	case string:
-		*e = TicketsStatus(s)
+		*e = OrdersStatus(s)
 	default:
-		return fmt.Errorf("unsupported scan type for TicketsStatus: %T", src)
+		return fmt.Errorf("unsupported scan type for OrdersStatus: %T", src)
 	}
 	return nil
 }
 
-type NullTicketsStatus struct {
-	TicketsStatus TicketsStatus
-	Valid         bool // Valid is true if TicketsStatus is not NULL
+type NullOrdersStatus struct {
+	OrdersStatus OrdersStatus
+	Valid        bool // Valid is true if OrdersStatus is not NULL
 }
 
 // Scan implements the Scanner interface.
-func (ns *NullTicketsStatus) Scan(value interface{}) error {
+func (ns *NullOrdersStatus) Scan(value interface{}) error {
 	if value == nil {
-		ns.TicketsStatus, ns.Valid = "", false
+		ns.OrdersStatus, ns.Valid = "", false
 		return nil
 	}
 	ns.Valid = true
-	return ns.TicketsStatus.Scan(value)
+	return ns.OrdersStatus.Scan(value)
 }
 
 // Value implements the driver Valuer interface.
-func (ns NullTicketsStatus) Value() (driver.Value, error) {
+func (ns NullOrdersStatus) Value() (driver.Value, error) {
 	if !ns.Valid {
 		return nil, nil
 	}
-	return string(ns.TicketsStatus), nil
+	return string(ns.OrdersStatus), nil
+}
+
+type PaymentsStatus string
+
+const (
+	PaymentsStatusPending   PaymentsStatus = "pending"
+	PaymentsStatusPaid      PaymentsStatus = "paid"
+	PaymentsStatusFailed    PaymentsStatus = "failed"
+	PaymentsStatusExpired   PaymentsStatus = "expired"
+	PaymentsStatusCancelled PaymentsStatus = "cancelled"
+	PaymentsStatusRefunded  PaymentsStatus = "refunded"
+)
+
+func (e *PaymentsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentsStatus(s)
+	case string:
+		*e = PaymentsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentsStatus struct {
+	PaymentsStatus PaymentsStatus
+	Valid          bool // Valid is true if PaymentsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentsStatus), nil
 }
 
 type Category struct {
@@ -116,23 +162,90 @@ type Event struct {
 	Location    string
 	StartTime   time.Time
 	EndTime     time.Time
-	Price       uint32
-	Quota       uint32
 	Status      NullEventsStatus
 	CreatedAt   sql.NullTime
 	UpdatedAt   sql.NullTime
 	DeletedAt   sql.NullTime
 }
 
+type EventMedium struct {
+	ID        uint64
+	EventID   uint64
+	ImagePath string
+	IsPrimary sql.NullBool
+	CreatedAt sql.NullTime
+}
+
+type Notification struct {
+	ID            uint64
+	UserID        uint64
+	Title         string
+	Message       string
+	Type          string
+	IsRead        bool
+	ReferenceType sql.NullString
+	ReferenceID   sql.NullInt64
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	DeletedAt     sql.NullTime
+}
+
+type Order struct {
+	ID          uint64
+	UserID      uint64
+	TotalAmount uint32
+	Status      OrdersStatus
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
+	DeletedAt   sql.NullTime
+}
+
+type OrderItem struct {
+	ID           uint64
+	OrderID      uint64
+	EventID      uint64
+	TicketTypeID uint64
+	Quantity     uint32
+	Price        uint32
+}
+
+type Payment struct {
+	ID                    uint64
+	OrderID               uint64
+	PaymentCode           string
+	Amount                uint32
+	PaymentMethod         string
+	PaymentProvider       string
+	ProviderTransactionID sql.NullString
+	Status                PaymentsStatus
+	PaidAt                sql.NullTime
+	ExpiredAt             sql.NullTime
+	CreatedAt             sql.NullTime
+	UpdatedAt             sql.NullTime
+	DeletedAt             sql.NullTime
+}
+
 type Ticket struct {
-	ID         uint64
-	EventID    uint64
-	UserID     uint64
-	TicketCode string
-	Status     NullTicketsStatus
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	DeletedAt  sql.NullTime
+	ID          uint64
+	OrderItemID uint64
+	TicketCode  sql.NullString
+	QrCode      sql.NullString
+	Status      sql.NullString
+	CheckedInAt sql.NullTime
+}
+
+type TicketType struct {
+	ID                uint64
+	EventID           uint64
+	Name              string
+	Price             uint64
+	Quota             uint32
+	MaxPerTransaction sql.NullInt32
+	StartSaleAt       sql.NullTime
+	EndSaleAt         sql.NullTime
+	CreatedAt         sql.NullTime
+	UpdatedAt         sql.NullTime
+	DeletedAt         sql.NullTime
 }
 
 type User struct {
