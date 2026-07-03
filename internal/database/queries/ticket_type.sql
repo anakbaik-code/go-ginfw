@@ -50,7 +50,11 @@ WHERE
     event_id = ?
     AND deleted_at IS NULL
 ORDER BY
-    created_at ASC;
+    created_at ASC
+LIMIT
+    ?
+OFFSET
+    ?;
 
 -- name: UpdateTicketType :exec
 UPDATE ticket_types

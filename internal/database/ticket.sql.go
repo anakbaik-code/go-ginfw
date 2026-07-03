@@ -55,9 +55,9 @@ VALUES
 
 type CreateTicketParams struct {
 	OrderItemID uint64
-	TicketCode  sql.NullString
-	QrCode      sql.NullString
-	Status      sql.NullString
+	TicketCode  string
+	QrCode      string
+	Status      TicketsStatus
 	CheckedInAt sql.NullTime
 }
 
@@ -98,7 +98,7 @@ LIMIT
     1
 `
 
-func (q *Queries) GetTicketByCode(ctx context.Context, ticketCode sql.NullString) (Ticket, error) {
+func (q *Queries) GetTicketByCode(ctx context.Context, ticketCode string) (Ticket, error) {
 	row := q.db.QueryRowContext(ctx, getTicketByCode, ticketCode)
 	var i Ticket
 	err := row.Scan(
@@ -197,7 +197,7 @@ WHERE
 `
 
 type UpdateTicketQRCodeParams struct {
-	QrCode sql.NullString
+	QrCode string
 	ID     uint64
 }
 
@@ -215,7 +215,7 @@ WHERE
 `
 
 type UpdateTicketStatusParams struct {
-	Status sql.NullString
+	Status TicketsStatus
 	ID     uint64
 }
 

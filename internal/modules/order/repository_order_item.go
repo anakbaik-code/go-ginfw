@@ -6,6 +6,12 @@ import (
 )
 
 type RepositoryOrderItem interface {
+	CountByOrderID(ctx context.Context, orderID uint64) (int64, error)
+	Create(ctx context.Context, oi OrderItem) (uint64, error)
+	Delete(ctx context.Context, id uint64) error
+	DeleteByOrderID(ctx context.Context, orderID uint64) error
+	GetOrderItemByID(ctx context.Context, id uint64) (*OrderItem, error)
+	ListByOrderID(ctx context.Context, orderID uint64) ([]OrderItem, error)
 }
 type repositoryOrderItem struct {
 	queries *database.Queries
@@ -39,14 +45,20 @@ func (r *repositoryOrderItem) Create(ctx context.Context, oi OrderItem) (uint64,
 	}
 	return uint64(lastID), nil
 }
-func (r *repositoryOrder) DeleteByOrderID(ctx context.Context, orderID uint64) error {
+func (r *repositoryOrderItem) Delete(ctx context.Context, id uint64) error {
+	if err := r.queries.DeleteOrderItem(ctx, id); err != nil {
+		return err
+	}
+	return nil
+}
+func (r *repositoryOrderItem) DeleteByOrderID(ctx context.Context, orderID uint64) error {
 	err := r.queries.DeleteOrderItemsByOrderID(ctx, orderID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (r *repositoryOrder) GetOrderItemByID(ctx context.Context, id uint64) (*OrderItem, error) {
+func (r *repositoryOrderItem) GetOrderItemByID(ctx context.Context, id uint64) (*OrderItem, error) {
 	result, err := r.queries.GetOrderItemByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -62,3 +74,21 @@ func (r *repositoryOrder) GetOrderItemByID(ctx context.Context, id uint64) (*Ord
 	return orderItem, nil
 }
 
+func (r *repositoryOrderItem) ListByOrderID(ctx context.Context, orderID uint64) ([]OrderItem, error) {
+	rows, err := r.queries.ListOrderItemsByOrderID(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	orderItems := make([]OrderItem, 0, len(rows))
+	for _, row := range rows {
+		orderItems = append(orderItems, OrderItem{
+			ID:           row.ID,
+			OrderID:      row.OrderID,
+			EventID:      row.EventID,
+			TicketTypeID: row.TicketTypeID,
+			Quantity:     row.Quantity,
+			Price:        row.Price,
+		})
+	}
+	return orderItems, nil
+}

@@ -297,7 +297,17 @@ WHERE
     AND deleted_at IS NULL
 ORDER BY
     created_at ASC
+LIMIT
+    ?
+OFFSET
+    ?
 `
+
+type ListTicketTypesByEventIDParams struct {
+	EventID uint64
+	Limit   int32
+	Offset  int32
+}
 
 type ListTicketTypesByEventIDRow struct {
 	ID                uint64
@@ -312,8 +322,8 @@ type ListTicketTypesByEventIDRow struct {
 	UpdatedAt         sql.NullTime
 }
 
-func (q *Queries) ListTicketTypesByEventID(ctx context.Context, eventID uint64) ([]ListTicketTypesByEventIDRow, error) {
-	rows, err := q.db.QueryContext(ctx, listTicketTypesByEventID, eventID)
+func (q *Queries) ListTicketTypesByEventID(ctx context.Context, arg ListTicketTypesByEventIDParams) ([]ListTicketTypesByEventIDRow, error) {
+	rows, err := q.db.QueryContext(ctx, listTicketTypesByEventID, arg.EventID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

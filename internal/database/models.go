@@ -144,6 +144,49 @@ func (ns NullPaymentsStatus) Value() (driver.Value, error) {
 	return string(ns.PaymentsStatus), nil
 }
 
+type TicketsStatus string
+
+const (
+	TicketsStatusActive    TicketsStatus = "active"
+	TicketsStatusUsed      TicketsStatus = "used"
+	TicketsStatusCancelled TicketsStatus = "cancelled"
+)
+
+func (e *TicketsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketsStatus(s)
+	case string:
+		*e = TicketsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTicketsStatus struct {
+	TicketsStatus TicketsStatus
+	Valid         bool // Valid is true if TicketsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketsStatus), nil
+}
+
 type Category struct {
 	ID        uint32
 	Name      string
@@ -228,9 +271,9 @@ type Payment struct {
 type Ticket struct {
 	ID          uint64
 	OrderItemID uint64
-	TicketCode  sql.NullString
-	QrCode      sql.NullString
-	Status      sql.NullString
+	TicketCode  string
+	QrCode      string
+	Status      TicketsStatus
 	CheckedInAt sql.NullTime
 }
 
