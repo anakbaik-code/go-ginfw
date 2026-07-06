@@ -11,9 +11,9 @@ import (
 
 type UserService interface {
 	Register(ctx context.Context, req *CreateRequest) (*User, error)
-	List(ctx context.Context, page int, limit int) ([]User, int64, error)
+	List(ctx context.Context, page int32, limit int32) ([]User, int64, error)
 	UpdateProfile(ctx context.Context, user User) error
-	GetActiveUsers(ctx context.Context) ([]User, error)
+	ListActiveUsers(ctx context.Context) ([]User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	Login(ctx context.Context, req *LoginRequest) (*User, string, string, error)
 	GetById(ctx context.Context, id int64) (*User, error)
@@ -60,7 +60,7 @@ func (s *serviceUser) Register(ctx context.Context, req *CreateRequest) (*User, 
 
 }
 
-func (s *serviceUser) List(ctx context.Context, page int, limit int) ([]User, int64, error) {
+func (s *serviceUser) List(ctx context.Context, page int32, limit int32) ([]User, int64, error) {
 	if page <= 0 {
 		page = 1
 	}
@@ -74,11 +74,7 @@ func (s *serviceUser) List(ctx context.Context, page int, limit int) ([]User, in
 	}
 
 	offset := (page - 1) * limit
-	users, err := s.repo.List(
-		ctx,
-		int32(limit),
-		int32(offset),
-	)
+	users, err := s.repo.List(ctx, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -102,8 +98,8 @@ func (s *serviceUser) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
-func (s *serviceUser) GetActiveUsers(ctx context.Context) ([]User, error) {
-	users, err := s.repo.GetActiveUsers(ctx)
+func (s *serviceUser) ListActiveUsers(ctx context.Context) ([]User, error) {
+	users, err := s.repo.ListActiveUsers(ctx)
 	if err != nil {
 		return nil, err
 	}

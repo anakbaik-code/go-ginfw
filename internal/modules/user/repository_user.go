@@ -11,13 +11,18 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) (int64, error)
 	List(ctx context.Context, limit int32, offset int32) ([]User, error)
 	UpdateProfile(ctx context.Context, user User) error
-	CountUsers(ctx context.Context) (int64, error)
 	Delete(ctx context.Context, id int64) error
-	GetActiveUsers(ctx context.Context) ([]User, error)
+	ListActiveUsers(ctx context.Context) ([]User, error)
 	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetById(ctx context.Context, id int64) (*User, error)
 	GetByRefreshToken(ctx context.Context, token string) (*User, error)
 	UpdateRefreshToken(ctx context.Context, id int64, refreshToken string) error
+	CountUsersActive(ctx context.Context) (int64, error)
+	CountOrganizerActive(ctx context.Context) (int64, error)
+	CountOrganizerAll(ctx context.Context) (int64, error)
+	ListOrganizer(ctx context.Context, limit int32, offset int32) ([]User, error)
+	CountUsers(ctx context.Context) (int64, error)
+	
 }
 
 type repositoryUser struct {
@@ -26,14 +31,6 @@ type repositoryUser struct {
 
 func NewRepositoryUser(q *database.Queries) UserRepository {
 	return &repositoryUser{queries: q}
-}
-
-func (r *repositoryUser) CountUsers(ctx context.Context) (int64, error) {
-	total, err := r.queries.CountUsers(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return total, nil
 }
 
 func (r *repositoryUser) Create(ctx context.Context, user *User) (int64, error) {
@@ -75,16 +72,18 @@ func (r *repositoryUser) List(ctx context.Context, limit int32, offset int32) ([
 	if err != nil {
 		return nil, err
 	}
-	users := make([]User, 0, len(rows))
+	users := make([]User, len(rows))
 	for _, row := range rows {
 		users = append(users, User{
-			ID:       row.ID,
-			Name:     row.Name,
-			Email:    row.Email,
-			Phone:    row.Phone.String,
-			Address:  row.Address.String,
-			Role:     row.Role,
-			IsActive: row.IsActive,
+			ID:        row.ID,
+			Name:      row.Name,
+			Email:     row.Email,
+			Phone:     row.Phone.String,
+			Address:   row.Address.String,
+			Role:      row.Role,
+			IsActive:  row.IsActive,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
 		})
 	}
 	return users, nil
@@ -112,8 +111,8 @@ func (r *repositoryUser) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
-func (r *repositoryUser) GetActiveUsers(ctx context.Context) ([]User, error) {
-	rows, err := r.queries.GetActiveUsers(ctx)
+func (r *repositoryUser) ListActiveUsers(ctx context.Context) ([]User, error) {
+	rows, err := r.queries.ListActiveUsers(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -208,4 +207,45 @@ func (r *repositoryUser) UpdateRefreshToken(ctx context.Context, id int64, refre
 		return err
 	}
 	return nil
+}
+
+func (r *repositoryUser) CountUsersActive(ctx context.Context) (int64, error) {
+	total, err := r.queries.CountUsersActive(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (r *repositoryUser) CountOrganizerActive(ctx context.Context) (int64, error) {
+	total, err := r.queries.CountOrganizerActive(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+func (r *repositoryUser) CountOrganizerAll(ctx context.Context) (int64, error) {
+	total, err := r.queries.CountOrganizerAll(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+func (r *repositoryUser) ListOrganizer(ctx context.Context, limit int32, offset int32) ([]User, error) {
+	rows, err := r.queries.ListOrganizers(ctx, database.ListOrganizersParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+	organizers := ToOrganizers(rows)
+	return organizers, nil
+}
+func (r *repositoryUser) CountUsers(ctx context.Context) (int64, error) {
+	result, err := r.queries.CountUsers(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
 }

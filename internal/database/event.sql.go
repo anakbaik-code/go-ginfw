@@ -11,6 +11,22 @@ import (
 	"time"
 )
 
+const countEvents = `-- name: CountEvents :one
+SELECT
+    COUNT(*)
+FROM
+    events
+WHERE
+    deleted_at IS NULL
+`
+
+func (q *Queries) CountEvents(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countEvents)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countEventsByStatus = `-- name: CountEventsByStatus :one
 SELECT
     COUNT(*)

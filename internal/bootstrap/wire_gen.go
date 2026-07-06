@@ -10,6 +10,10 @@ import (
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/database"
 	"go-fwgin/internal/modules/category"
+	"go-fwgin/internal/modules/dashboard/admin"
+	"go-fwgin/internal/modules/event"
+	"go-fwgin/internal/modules/order"
+	"go-fwgin/internal/modules/payment"
 	"go-fwgin/internal/modules/user"
 )
 
@@ -31,10 +35,20 @@ func InitializeApp() (*App, func(), error) {
 	categoryRepository := category.NewRepositoryCategory(queries)
 	categoryService := category.NewServiceCategory(categoryRepository)
 	handlerCategory := category.NewHandlerCategory(categoryService)
+	repositoryEvent := event.NewRepositoryEvent(queries)
+	serviceEvent := event.NewServiceEvent(repositoryEvent)
+	handlerEvent := event.NewHandlerEvent(serviceEvent)
+	repositoryDashboardAdmin := admin.NewRepositoryDashboardAdmin(queries)
+	repositoryOrder := order.NewRepositoryOrder(queries)
+	repositoryPayment := payment.NewRepositoryPayment(queries)
+	serviceDashboardAdmin := admin.NewServiceDashboardAdmin(repositoryDashboardAdmin, userRepository, repositoryEvent, repositoryOrder, repositoryPayment)
+	handlerDashboardAdmin := admin.NewDashboardHandler(serviceDashboardAdmin)
 	app := &App{
-		Config:          configConfig,
-		UserHandler:     handlerUser,
-		CategoryHandler: handlerCategory,
+		Config:                configConfig,
+		UserHandler:           handlerUser,
+		CategoryHandler:       handlerCategory,
+		EventHandler:          handlerEvent,
+		DashboardAdminHandler: handlerDashboardAdmin,
 	}
 	return app, func() {
 		cleanup()

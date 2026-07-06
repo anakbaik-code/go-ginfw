@@ -17,6 +17,7 @@ type RepositoryEvent interface {
 	ListMyEvents(ctx context.Context, userID uint64, limit int32, offset int32) ([]EventWithDetails, error)
 	CountMyEvent(ctx context.Context, userId uint64) (int64, error)
 	GetMyEventId(ctx context.Context, userId uint64, id uint64) (*EventWithDetails, error)
+	CountEvent(ctx context.Context) (int64, error)
 }
 
 type repositoryEvent struct {
@@ -260,4 +261,11 @@ func (r *repositoryEvent) GetMyEventId(ctx context.Context, userId uint64, id ui
 		AvailableQuota: row.AvailableQuota,
 	}
 	return event, nil
+}
+func (r *repositoryEvent) CountEvent(ctx context.Context) (int64, error) {
+	result, err := r.queries.CountEvents(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
 }

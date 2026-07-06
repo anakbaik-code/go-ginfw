@@ -8,7 +8,10 @@ import (
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/database"
 	"go-fwgin/internal/modules/category"
+	"go-fwgin/internal/modules/dashboard/admin"
 	"go-fwgin/internal/modules/event"
+	"go-fwgin/internal/modules/order"
+	"go-fwgin/internal/modules/payment"
 	"go-fwgin/internal/modules/user"
 
 	"github.com/google/wire"
@@ -23,10 +26,13 @@ func InitializeApp() (*App, func(), error) {
 		wire.Bind(new(database.DBTX), new(*sql.DB)),
 
 		// Route Group
+
 		user.UserSet,
 		category.CategorySet,
 		event.EventSet,
-
+		order.OrderSet,
+		payment.PaymentSet,
+		admin.DashboardAdminSet,
 		wire.Struct(new(App), "*"),
 	)
 	return nil, nil, nil

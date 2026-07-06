@@ -19,7 +19,7 @@ func (h *HandlerUser) RoutesUser(rg *gin.RouterGroup, cfg *config.Config) {
 			protected.GET("", h.ListUser)
 			protected.PUT("/:id", h.UpdateUserProfile)
 			protected.GET("/:id", h.GetByID)
-			protected.GET("/active", h.GetActiveUsers)
+			protected.GET("/active", h.ListActiveUsers)
 		}
 
 	}

@@ -1,3 +1,11 @@
+-- name: CountEvents :one
+SELECT
+    COUNT(*)
+FROM
+    events
+WHERE
+    deleted_at IS NULL;
+
 -- name: CreateEvent :execresult
 INSERT INTO
     events (

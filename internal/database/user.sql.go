@@ -11,10 +11,49 @@ import (
 	"time"
 )
 
+const countOrganizerActive = `-- name: CountOrganizerActive :one
+SELECT
+    COUNT(*) as total
+FROM
+    users
+WHERE
+    role = 'organizer'
+    AND deleted_at IS NULL
+    AND is_active = true
+`
+
+func (q *Queries) CountOrganizerActive(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOrganizerActive)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const countOrganizerAll = `-- name: CountOrganizerAll :one
+SELECT
+    COUNT(*) as total
+FROM
+    users
+WHERE
+    role = 'organizer'
+    AND deleted_at IS NULL
+`
+
+func (q *Queries) CountOrganizerAll(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countOrganizerAll)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const countUsers = `-- name: CountUsers :one
-SELECT COUNT(*) as total
-FROM users 
-WHERE deleted_at IS NULL
+SELECT
+    COUNT(*) as total
+FROM
+    users
+WHERE
+    role = 'user'
+    AND deleted_at IS NULL
 `
 
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
@@ -24,20 +63,39 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	return total, err
 }
 
+const countUsersActive = `-- name: CountUsersActive :one
+SELECT
+    COUNT(*) as total
+FROM
+    users
+WHERE
+    role = 'user'
+    AND deleted_at IS NULL
+    AND is_active = true
+`
+
+func (q *Queries) CountUsersActive(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countUsersActive)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
 const createUser = `-- name: CreateUser :execresult
-INSERT INTO users (
-    name, 
-    email, 
-    password_hash,
-    phone,
-    address,
-    role,
-    is_active,
-    created_at,
-    updated_at
-) VALUES (
-    ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
-)
+INSERT INTO
+    users (
+        name,
+        email,
+        password_hash,
+        phone,
+        address,
+        role,
+        is_active,
+        created_at,
+        updated_at
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, (NOW()), (NOW()))
 `
 
 type CreateUserParams struct {
@@ -63,11 +121,12 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (sql.Res
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-UPDATE users 
-SET 
-    deleted_at = NOW(),
-    updated_at = NOW()
-WHERE id = ?
+UPDATE users
+SET
+    deleted_at = (NOW()),
+    updated_at = (NOW())
+WHERE
+    id = ?
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
@@ -75,57 +134,8 @@ func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
 	return err
 }
 
-const getActiveUsers = `-- name: GetActiveUsers :many
-SELECT 
-    id,
-    name,
-    email,
-    role,
-    created_at
-FROM users 
-WHERE is_active = true AND deleted_at IS NULL
-ORDER BY created_at DESC
-`
-
-type GetActiveUsersRow struct {
-	ID        uint64
-	Name      string
-	Email     string
-	Role      string
-	CreatedAt time.Time
-}
-
-func (q *Queries) GetActiveUsers(ctx context.Context) ([]GetActiveUsersRow, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveUsers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetActiveUsersRow
-	for rows.Next() {
-		var i GetActiveUsersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Email,
-			&i.Role,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT 
+SELECT
     id,
     name,
     email,
@@ -136,8 +146,11 @@ SELECT
     is_active,
     created_at,
     updated_at
-FROM users 
-WHERE email = ? AND deleted_at IS NULL
+FROM
+    users
+WHERE
+    email = ?
+    AND deleted_at IS NULL
 `
 
 type GetUserByEmailRow struct {
@@ -172,7 +185,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT 
+SELECT
     id,
     name,
     email,
@@ -182,8 +195,11 @@ SELECT
     is_active,
     created_at,
     updated_at
-FROM users 
-WHERE id = ? AND deleted_at IS NULL
+FROM
+    users
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type GetUserByIDRow struct {
@@ -216,14 +232,17 @@ func (q *Queries) GetUserByID(ctx context.Context, id uint64) (GetUserByIDRow, e
 }
 
 const getUserByRefreshToken = `-- name: GetUserByRefreshToken :one
-SELECT 
+SELECT
     id,
     name,
     email,
     role,
     is_active
-FROM users 
-WHERE refresh_token = ? AND deleted_at IS NULL
+FROM
+    users
+WHERE
+    refresh_token = ?
+    AND deleted_at IS NULL
 `
 
 type GetUserByRefreshTokenRow struct {
@@ -248,8 +267,9 @@ func (q *Queries) GetUserByRefreshToken(ctx context.Context, refreshToken sql.Nu
 }
 
 const hardDeleteUser = `-- name: HardDeleteUser :exec
-DELETE FROM users 
-WHERE id = ?
+DELETE FROM users
+WHERE
+    id = ?
 `
 
 func (q *Queries) HardDeleteUser(ctx context.Context, id uint64) error {
@@ -257,8 +277,138 @@ func (q *Queries) HardDeleteUser(ctx context.Context, id uint64) error {
 	return err
 }
 
+const listActiveUsers = `-- name: ListActiveUsers :many
+SELECT
+    id,
+    name,
+    email,
+    role,
+    created_at
+FROM
+    users
+WHERE
+    is_active = true
+    AND deleted_at IS NULL
+ORDER BY
+    created_at DESC
+`
+
+type ListActiveUsersRow struct {
+	ID        uint64
+	Name      string
+	Email     string
+	Role      string
+	CreatedAt time.Time
+}
+
+func (q *Queries) ListActiveUsers(ctx context.Context) ([]ListActiveUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listActiveUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActiveUsersRow
+	for rows.Next() {
+		var i ListActiveUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listOrganizers = `-- name: ListOrganizers :many
+SELECT
+    id,
+    name,
+    email,
+    phone,
+    address,
+    role,
+    is_active,
+    created_at,
+    updated_at,
+    deleted_at
+FROM
+    users
+WHERE
+    role = 'organizer'
+    AND deleted_at IS NULL
+ORDER BY
+    created_at DESC
+LIMIT
+    ?
+OFFSET
+    ?
+`
+
+type ListOrganizersParams struct {
+	Limit  int32
+	Offset int32
+}
+
+type ListOrganizersRow struct {
+	ID        uint64
+	Name      string
+	Email     string
+	Phone     sql.NullString
+	Address   sql.NullString
+	Role      string
+	IsActive  bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+}
+
+func (q *Queries) ListOrganizers(ctx context.Context, arg ListOrganizersParams) ([]ListOrganizersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listOrganizers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOrganizersRow
+	for rows.Next() {
+		var i ListOrganizersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.Address,
+			&i.Role,
+			&i.IsActive,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT 
+SELECT
     id,
     name,
     email,
@@ -268,10 +418,16 @@ SELECT
     is_active,
     created_at,
     updated_at
-FROM users 
-WHERE deleted_at IS NULL
-ORDER BY id DESC
-LIMIT ? OFFSET ?
+FROM
+    users
+WHERE
+    deleted_at IS NULL
+ORDER BY
+    id DESC
+LIMIT
+    ?
+OFFSET
+    ?
 `
 
 type ListUsersParams struct {
@@ -325,7 +481,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT 
+SELECT
     id,
     name,
     email,
@@ -335,11 +491,20 @@ SELECT
     is_active,
     created_at,
     updated_at
-FROM users 
-WHERE deleted_at IS NULL
-    AND (name LIKE ? OR email LIKE ?)
-ORDER BY id DESC
-LIMIT ? OFFSET ?
+FROM
+    users
+WHERE
+    deleted_at IS NULL
+    AND (
+        name LIKE ?
+        OR email LIKE ?
+    )
+ORDER BY
+    id DESC
+LIMIT
+    ?
+OFFSET
+    ?
 `
 
 type SearchUsersParams struct {
@@ -400,13 +565,15 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 }
 
 const updateUser = `-- name: UpdateUser :exec
-UPDATE users 
-SET 
+UPDATE users
+SET
     name = ?,
     phone = ?,
     address = ?,
-    updated_at = NOW()
-WHERE id = ? AND deleted_at IS NULL
+    updated_at = (NOW())
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type UpdateUserParams struct {
@@ -427,11 +594,13 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 }
 
 const updateUserEmail = `-- name: UpdateUserEmail :exec
-UPDATE users 
-SET 
+UPDATE users
+SET
     email = ?,
-    updated_at = NOW()
-WHERE id = ? AND deleted_at IS NULL
+    updated_at = (NOW())
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type UpdateUserEmailParams struct {
@@ -445,11 +614,13 @@ func (q *Queries) UpdateUserEmail(ctx context.Context, arg UpdateUserEmailParams
 }
 
 const updateUserPassword = `-- name: UpdateUserPassword :exec
-UPDATE users 
-SET 
+UPDATE users
+SET
     password_hash = ?,
-    updated_at = NOW()
-WHERE id = ? AND deleted_at IS NULL
+    updated_at = (NOW())
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type UpdateUserPasswordParams struct {
@@ -463,11 +634,13 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 }
 
 const updateUserRefreshToken = `-- name: UpdateUserRefreshToken :exec
-UPDATE users 
-SET 
+UPDATE users
+SET
     refresh_token = ?,
-    updated_at = NOW()
-WHERE id = ? AND deleted_at IS NULL
+    updated_at = (NOW())
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type UpdateUserRefreshTokenParams struct {
@@ -481,11 +654,13 @@ func (q *Queries) UpdateUserRefreshToken(ctx context.Context, arg UpdateUserRefr
 }
 
 const updateUserRole = `-- name: UpdateUserRole :exec
-UPDATE users 
-SET 
+UPDATE users
+SET
     role = ?,
-    updated_at = NOW()
-WHERE id = ? AND deleted_at IS NULL
+    updated_at = (NOW())
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type UpdateUserRoleParams struct {
@@ -499,11 +674,13 @@ func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) 
 }
 
 const updateUserStatus = `-- name: UpdateUserStatus :exec
-UPDATE users 
-SET 
+UPDATE users
+SET
     is_active = ?,
-    updated_at = NOW()
-WHERE id = ? AND deleted_at IS NULL
+    updated_at = (NOW())
+WHERE
+    id = ?
+    AND deleted_at IS NULL
 `
 
 type UpdateUserStatusParams struct {

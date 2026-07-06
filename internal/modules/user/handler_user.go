@@ -52,7 +52,7 @@ func (h *HandlerUser) ListUser(c *gin.Context) {
 		return
 	}
 
-	users, total, err := h.service.List(c.Request.Context(), int(req.Page), int(req.Limit))
+	users, total, err := h.service.List(c.Request.Context(), req.Page,req.Limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -95,8 +95,8 @@ func (h *HandlerUser) UpdateUserProfile(c *gin.Context) {
 	})
 
 }
-func (h *HandlerUser) GetActiveUsers(c *gin.Context) {
-	users, err := h.service.GetActiveUsers(c.Request.Context())
+func (h *HandlerUser) ListActiveUsers(c *gin.Context) {
+	users, err := h.service.ListActiveUsers(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": err.Error(),
