@@ -1,43 +1,46 @@
 package middleware
 
 import (
-	"go-fwgin/internal/config"
-	"go-fwgin/internal/utils"
+	"go-fwgin/internal/pkg/jwt"
+
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func AuthJwtMiddleware(cfg *config.Config) gin.HandlerFunc {
+func AuthJwtMiddleware(jwtService *jwt.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 
-		// check format use Bearer<Token>
-		prefix := strings.HasPrefix(authHeader, "Bearer")
-
-		if authHeader == "" || !prefix {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "JWT Security: Token missing or incorrect format! Must be 'Bearer <token>'",
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized,gin.H{
+				"error":"Authorization header is required",
 			})
 			c.Abort()
-			return
+			return 
 		}
 
-		// trims teks "bearer" to get token string
+		// check format use Bearer<Token>
+		if !strings.HasPrefix(authHeader,"Bearer") {
+			c.JSON(http.StatusUnauthorized,gin.H{
+				"error" : "Authorization Header Must Use Bearer <Token>",
+			})
+			c.Abort()
+			return 
+		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
-		// validate token
-		claims, err := utils.ValidateToken(tokenString, cfg.JwtSecret)
+		claims,err := jwtService.ValidateAccessToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"errors": "JWT Security Guard: Your token is invalid or has expired!" + err.Error(),
+			c.JSON(http.StatusUnauthorized,gin.H{
+				"error":"Invalid or expired token",
 			})
 			c.Abort()
-			return
+			return 
 		}
-		c.Set("user_id", claims.UserId)
-		c.Set("role", claims.Role)
+		c.Set("user_id",claims.UserID)
+		c.Set("role",claims.Role)
 		c.Next()
 	}
 }

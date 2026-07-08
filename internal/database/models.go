@@ -11,6 +11,92 @@ import (
 	"time"
 )
 
+type AttendancesCheckInMethod string
+
+const (
+	AttendancesCheckInMethodQrCode AttendancesCheckInMethod = "qr_code"
+	AttendancesCheckInMethodManual AttendancesCheckInMethod = "manual"
+	AttendancesCheckInMethodOnline AttendancesCheckInMethod = "online"
+)
+
+func (e *AttendancesCheckInMethod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AttendancesCheckInMethod(s)
+	case string:
+		*e = AttendancesCheckInMethod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AttendancesCheckInMethod: %T", src)
+	}
+	return nil
+}
+
+type NullAttendancesCheckInMethod struct {
+	AttendancesCheckInMethod AttendancesCheckInMethod
+	Valid                    bool // Valid is true if AttendancesCheckInMethod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAttendancesCheckInMethod) Scan(value interface{}) error {
+	if value == nil {
+		ns.AttendancesCheckInMethod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AttendancesCheckInMethod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAttendancesCheckInMethod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AttendancesCheckInMethod), nil
+}
+
+type AttendancesStatus string
+
+const (
+	AttendancesStatusPending   AttendancesStatus = "pending"
+	AttendancesStatusCheckedIn AttendancesStatus = "checked_in"
+	AttendancesStatusCancelled AttendancesStatus = "cancelled"
+)
+
+func (e *AttendancesStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AttendancesStatus(s)
+	case string:
+		*e = AttendancesStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AttendancesStatus: %T", src)
+	}
+	return nil
+}
+
+type NullAttendancesStatus struct {
+	AttendancesStatus AttendancesStatus
+	Valid             bool // Valid is true if AttendancesStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAttendancesStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.AttendancesStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AttendancesStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAttendancesStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AttendancesStatus), nil
+}
+
 type EventsStatus string
 
 const (
@@ -185,6 +271,21 @@ func (ns NullTicketsStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.TicketsStatus), nil
+}
+
+type Attendance struct {
+	ID            int64
+	OrderID       uint64
+	EventID       uint64
+	UserID        uint64
+	TicketTypeID  uint64
+	CheckInTime   sql.NullTime
+	CheckInMethod NullAttendancesCheckInMethod
+	Status        NullAttendancesStatus
+	CheckedBy     sql.NullInt64
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	DeletedAt     sql.NullTime
 }
 
 type Category struct {

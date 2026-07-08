@@ -3,6 +3,7 @@ package event
 import (
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/middleware"
+	"go-fwgin/internal/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,9 +11,10 @@ import (
 func (h *HandlerEvent) RoutesEvent(r *gin.RouterGroup, cfg *config.Config) {
 
 	// Organizer routes
+	jwtService := jwt.New(cfg.JwtSecret)
 	organizer := r.Group("/events")
 	organizer.Use(
-		middleware.AuthJwtMiddleware(cfg),
+		middleware.AuthJwtMiddleware(jwtService),
 		// middleware.RBAC("organizer"),
 	)
 	{
@@ -35,7 +37,7 @@ func (h *HandlerEvent) RoutesEvent(r *gin.RouterGroup, cfg *config.Config) {
 	// My Events
 	myEvents := r.Group("/my/events")
 	myEvents.Use(
-		middleware.AuthJwtMiddleware(cfg),
+		middleware.AuthJwtMiddleware(jwtService),
 		// middleware.RBAC("organizer"),
 	)
 	{

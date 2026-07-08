@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/errgroup"
 )
 
 
@@ -23,98 +24,76 @@ func (h *HandlerDashboardAdmin) GetDashboardAdmin(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Ambil semua data secara paralel
-	type dashboardResult struct {
+	var(
 		totalEvents           int64
 		totalEventsActive     int64
 		totalUsers            int64
 		totalOrganizers       int64
 		totalOrganizersActive int64
 		revenueSummary        *RevenueSummary
-		err                   error
-	}
+    )
 
-	ch := make(chan dashboardResult, 1)
 
-	go func() {
-		var res dashboardResult
+	g, gctx := errgroup.WithContext(ctx)
 
-		// Parallel calls
-		totalEvents, err := h.service.TotalEvent(ctx)
-		if err != nil {
-			res.err = err
-			ch <- res
-			return
-		}
-		res.totalEvents = totalEvents
+	g.Go(func() error {
+		v, err := h.service.TotalEvent(gctx)
+		totalEvents = v
+		return err
+	})
 
-		totalEventsActive, err := h.service.TotalEventActive(ctx)
-		if err != nil {
-			res.err = err
-			ch <- res
-			return
-		}
-		res.totalEventsActive = totalEventsActive
+	g.Go(func() error {
+		v, err := h.service.TotalEventActive(gctx)
+		totalEventsActive = v
+		return err
+	})
 
-		totalUsers, err := h.service.TotalUsers(ctx)
-		if err != nil {
-			res.err = err
-			ch <- res
-			return
-		}
-		res.totalUsers = totalUsers
+	g.Go(func() error {
+		v, err := h.service.TotalUsers(gctx)
+		totalUsers = v
+		return err
+	})
 
-		totalOrganizers, err := h.service.TotalOrganizerAll(ctx)
-		if err != nil {
-			res.err = err
-			ch <- res
-			return
-		}
-		res.totalOrganizers = totalOrganizers
+	g.Go(func() error {
+		v, err := h.service.TotalOrganizerAll(gctx)
+		totalOrganizers = v
+		return err
+	})
 
-		totalOrganizersActive, err := h.service.TotalOrganizerActive(ctx)
-		if err != nil {
-			res.err = err
-			ch <- res
-			return
-		}
-		res.totalOrganizersActive = totalOrganizersActive
+	g.Go(func() error {
+		v, err := h.service.TotalOrganizerActive(gctx)
+		totalOrganizersActive = v
+		return err
+	})
 
-		// Revenue summary (opsional, bisa pake year from query)
+	g.Go(func() error {
 		year := time.Now().Year()
 		yearTime := time.Date(year, time.January, 1, 0, 0, 0, 0, time.UTC)
-		revenue, err := h.service.GetRevenueSummary(ctx, yearTime)
-		if err != nil {
-			res.err = err
-			ch <- res
-			return
-		}
-		res.revenueSummary = revenue
+		v, err := h.service.GetRevenueSummary(gctx, yearTime)
+		revenueSummary = v
+		return err
+	})
 
-		ch <- res
-	}()
-
-	res := <-ch
-	if res.err != nil {
+	if err := g.Wait(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to fetch dashboard data",
-			"error":   res.err.Error(),
+			"error":   err.Error(),
 		})
 		return
 	}
 
-	// Response ONE ENDPOINT dengan semua data
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
-		"data":    DashboardResponse{
+		"data": DashboardResponse{
 			Stats: DashboardStats{
-				TotalEvents:           res.totalEvents,
-				TotalEventsActive:     res.totalEventsActive,
-				TotalUsers:            res.totalUsers,
-				TotalOrganizers:       res.totalOrganizers,
-				TotalOrganizersActive: res.totalOrganizersActive,
+				TotalEvents:           totalEvents,
+				TotalEventsActive:     totalEventsActive,
+				TotalUsers:            totalUsers,
+				TotalOrganizers:       totalOrganizers,
+				TotalOrganizersActive: totalOrganizersActive,
 			},
-			Revenue: ToRevenueSummaryResponse(res.revenueSummary),
+			Revenue: ToRevenueSummaryResponse(revenueSummary),
 		},
 	})
 }

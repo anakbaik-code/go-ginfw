@@ -3,16 +3,18 @@ package category
 import (
 	"go-fwgin/internal/config"
 	"go-fwgin/internal/middleware"
+	"go-fwgin/internal/pkg/jwt"
 
 	"github.com/gin-gonic/gin"
 )
 
 func (h *HandlerCategory) RoutesUser(rg *gin.RouterGroup, cfg *config.Config) {
+	jwtService := jwt.New(cfg.JwtSecret)
 	categories := rg.Group("/categories")
 	{
 		categories.GET("", h.ListCategory)
 		categories.GET("/:id", h.GetByID)
-		protected := categories.Group("", middleware.AuthJwtMiddleware(cfg))
+		protected := categories.Group("", middleware.AuthJwtMiddleware(jwtService))
 		{
 			protected.POST("", h.Create)
 			protected.PUT("/:id", h.Update)

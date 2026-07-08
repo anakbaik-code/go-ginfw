@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"sync"
 	"time"
 
 	"github.com/spf13/viper"
@@ -34,22 +36,32 @@ type Config struct {
 	JwtRefreshTokenExp time.Duration `mapstructure:"JWT_REFRESH_TOKEN_EXP"`
 }
 
+var (
+	appConfig *Config
+	cfgOnce   sync.Once
+	loadErr   error
+)
+
 func LoadConfig() (*Config, error) {
-	viper.SetConfigFile(".env")
-	viper.SetConfigType("env")
-	viper.AutomaticEnv()
 
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, err
+	cfgOnce.Do(func() {
+		viper.SetConfigFile(".env")
+		viper.SetConfigType("env")
+		viper.AutomaticEnv()
+		if err := viper.ReadInConfig(); err != nil {
+			loadErr = fmt.Errorf("gagal membaca file config: %w", err)
+			return // Keluar dari closure func(), bukan dari LoadConfig()
 		}
+		configTemp := &Config{}
+		if err := viper.Unmarshal(configTemp); err != nil {
+			loadErr = fmt.Errorf("gagal unmarshal config: %w", err)
+			return
+		}
+		appConfig = configTemp
+	})
+	if loadErr != nil {
+		return nil, loadErr
 	}
-	var config Config
+	return appConfig, nil
 
-	// unmarshal
-	if err := viper.Unmarshal(&config); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
 }
